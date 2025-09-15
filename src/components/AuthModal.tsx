@@ -1,12 +1,10 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { UserTypeSelector } from "./UserTypeSelector";
 import { Heart, Users } from "lucide-react";
 
 interface AuthModalProps {
@@ -31,14 +29,18 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
 
   const { login, register, clearAllUsers } = useAuth();
 
+  // Sincroniza o mode interno com o mode passado do Navigation
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode, isOpen]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (mode === "login") {
       const success = login(formData.email, formData.password);
       if (success) {
-        onClose();
-        resetForm();
+        handleClose();
       }
     } else {
       const userData = {
@@ -56,10 +58,15 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
 
       const success = register(userData);
       if (success) {
-        onClose();
-        resetForm();
+        handleClose();
       }
     }
+  };
+
+  const handleClose = () => {
+    onClose();
+    resetForm();
+    setMode(initialMode);
   };
 
   const resetForm = () => {
@@ -74,12 +81,6 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
     });
   };
 
-  const handleClose = () => {
-    onClose();
-    resetForm();
-    setMode(initialMode);
-  };
-
   const handleSelectUserType = (type: "patient" | "professional") => {
     setUserType(type);
     setMode("register");
@@ -89,6 +90,9 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
     setMode("selectType");
   };
 
+  // ===========================
+  // Render - Seleção de tipo
+  // ===========================
   if (mode === "selectType") {
     return (
       <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -96,7 +100,6 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
           <DialogHeader>
             <DialogTitle>Cadastro - PsiConnect</DialogTitle>
           </DialogHeader>
-          
           <div className="space-y-6">
             <div className="text-center">
               <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -106,7 +109,6 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
                 Escolha o tipo de conta que melhor se adequa ao seu perfil
               </p>
             </div>
-            
             <div className="grid md:grid-cols-2 gap-6">
               <Card 
                 className="cursor-pointer transition-all duration-300 hover:shadow-lg hover:ring-2 hover:ring-blue-500"
@@ -168,6 +170,9 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
     );
   }
 
+  // ===========================
+  // Render - Login ou Cadastro
+  // ===========================
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
@@ -287,12 +292,7 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
           </Button>
 
           {mode === "register" && (
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleBackToSelectType}
-              className="w-full"
-            >
+            <Button type="button" variant="outline" onClick={handleBackToSelectType} className="w-full">
               Voltar para Seleção de Tipo
             </Button>
           )}
@@ -310,14 +310,8 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
           </Button>
         </div>
 
-        {/* Botão para limpar dados (apenas para desenvolvimento) */}
         <div className="border-t pt-4">
-          <Button 
-            variant="destructive" 
-            size="sm" 
-            onClick={clearAllUsers}
-            className="w-full"
-          >
+          <Button variant="destructive" size="sm" onClick={clearAllUsers} className="w-full">
             🗑️ Limpar Todos os Dados (Dev)
           </Button>
         </div>

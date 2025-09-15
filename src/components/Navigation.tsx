@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "./AuthModal";
@@ -7,6 +6,7 @@ import { NotificationBell } from "./NotificationBell";
 
 export const Navigation = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "selectType">("login"); // 👈 novo estado
   const { user, logout } = useAuth();
 
   return (
@@ -55,11 +55,19 @@ export const Navigation = () => {
               </>
             ) : (
               <>
-                <Button onClick={() => setShowAuthModal(true)}>
+                <Button
+                  onClick={() => {
+                    setAuthMode("login"); // 👈 modo login
+                    setShowAuthModal(true);
+                  }}
+                >
                   Entrar
                 </Button>
-                <Button 
-                  onClick={() => setShowAuthModal(true)} 
+                <Button
+                  onClick={() => {
+                    setAuthMode("selectType"); // 👈 modo cadastro
+                    setShowAuthModal(true);
+                  }}
                   variant="outline"
                 >
                   Cadastrar
@@ -70,10 +78,10 @@ export const Navigation = () => {
         </div>
       </div>
 
-      <AuthModal 
-        isOpen={showAuthModal} 
+      <AuthModal
+        isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        mode="login"
+        mode={authMode} // 👈 usa o estado dinâmico agora
         userType="patient"
       />
     </header>
