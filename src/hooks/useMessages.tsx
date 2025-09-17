@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 
 export interface Message {
   id: number;
   senderId: string;
-  senderName: string;
+  senderName: string;       // Agora será o nome real
   senderType: "patient" | "professional";
   receiverId: string;
   receiverName: string;
@@ -26,7 +25,7 @@ export interface Conversation {
   messages: Message[];
 }
 
-export const useMessages = (userId?: string, userType?: "patient" | "professional") => {
+export const useMessages = (userId?: string, userType?: "patient" | "professional", userName?: string) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
 
   useEffect(() => {
@@ -47,7 +46,7 @@ export const useMessages = (userId?: string, userType?: "patient" | "professiona
   };
 
   const sendMessage = (receiverId: string, receiverName: string, content: string) => {
-    if (!userId || !userType) return;
+    if (!userId || !userType || !userName) return;
 
     const conversationId = userType === "patient" 
       ? `${userId}-${receiverId}` 
@@ -56,7 +55,7 @@ export const useMessages = (userId?: string, userType?: "patient" | "professiona
     const newMessage: Message = {
       id: Date.now(),
       senderId: userId,
-      senderName: userType === "patient" ? "Paciente" : "Profissional",
+      senderName: userName,     // ✅ Aqui passamos o nome real
       senderType: userType,
       receiverId,
       receiverName,
@@ -83,9 +82,9 @@ export const useMessages = (userId?: string, userType?: "patient" | "professiona
       const newConversation: Conversation = {
         id: conversationId,
         patientId: userType === "patient" ? userId : receiverId,
-        patientName: userType === "patient" ? "Você" : receiverName,
+        patientName: userType === "patient" ? userName : receiverName,
         professionalId: userType === "professional" ? userId : receiverId,
-        professionalName: userType === "professional" ? "Você" : receiverName,
+        professionalName: userType === "professional" ? userName : receiverName,
         lastMessage: content,
         lastMessageTime: newMessage.timestamp,
         unreadCount: userType === "patient" ? 0 : 1,

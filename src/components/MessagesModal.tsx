@@ -14,9 +14,9 @@ interface MessagesModalProps {
   onOpenChange: (open: boolean) => void;
   recipientId?: string;
   recipientName?: string;
-  userId: string;  // 🔑 novo
-  userType: "patient" | "psychologist"; // 🔑 novo
-    initialConversationId?: string;  // 🔹 conversa que deve abrir
+  userId: string;
+  userType: "patient" | "psychologist";
+  initialConversationId?: string;
 }
 
 export const MessagesModal = ({
@@ -30,22 +30,21 @@ export const MessagesModal = ({
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const { user } = useAuth();
-  
-  const userType = user?.type === "professional" ? "professional" : "patient";
-  const { conversations, sendMessage, markAsRead } = useMessages(user?.id?.toString(), userType);
 
-  // 🔹 Sempre que abrir o modal com um initialConversationId, selecionar a conversa
- useEffect(() => {
-  if (!open || !initialConversationId) return;
+const userType = user?.type === "professional" ? "professional" : "patient";
+const userName = user?.name || "Usuário"; // aqui pega o nome do usuário logado
+const { conversations, sendMessage, markAsRead } = useMessages(user?.id?.toString(), userType, userName);
 
-  const conv = conversations.find(c => c.id === initialConversationId);
-  if (conv) {
-    setSelectedConversation(conv);
-    markAsRead(conv.id);
-  }
-}, [open, initialConversationId, conversations, markAsRead]);
+  useEffect(() => {
+    if (!open || !initialConversationId) return;
 
-  // 🔹 Se a lista de conversas atualizar, garantir que a conversa aberta também atualize
+    const conv = conversations.find(c => c.id === initialConversationId);
+    if (conv) {
+      setSelectedConversation(conv);
+      markAsRead(conv.id);
+    }
+  }, [open, initialConversationId, conversations, markAsRead]);
+
   useEffect(() => {
     if (selectedConversation) {
       const updatedConv = conversations.find(c => c.id === selectedConversation.id);
@@ -55,7 +54,6 @@ export const MessagesModal = ({
     }
   }, [conversations, selectedConversation]);
 
-  // 🔹 Resetar conversa selecionada quando fechar o modal
   useEffect(() => {
     if (!open) {
       setSelectedConversation(null);
@@ -72,7 +70,7 @@ export const MessagesModal = ({
       const receiverName = userType === "patient" 
         ? selectedConversation.professionalName 
         : selectedConversation.patientName;
-      
+
       sendMessage(receiverId, receiverName, newMessage);
       setNewMessage("");
     } else if (recipientId && recipientName) {
@@ -167,20 +165,20 @@ export const MessagesModal = ({
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-3 mb-3">
-                  {selectedConversation?.messages.map((message) => (
+                  {(selectedConversation?.messages || []).map((message) => (
                     <div
                       key={message.id}
-                      className={`flex ${
-                        message.senderId === user?.id?.toString() ? "justify-end" : "justify-start"
-                      }`}
+                      className={`flex ${message.senderId === user?.id?.toString() ? "justify-end" : "justify-start"}`}
                     >
-                      <div
-                        className={`max-w-xs px-3 py-2 rounded-lg ${
-                          message.senderId === user?.id?.toString()
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-gray-100 text-gray-900"
-                        }`}
-                      >
+                      <div className={`max-w-xs px-3 py-2 rounded-lg ${
+                        message.senderId === user?.id?.toString()
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-gray-100 text-gray-900"
+                      }`}>
+                        {/* Exibe sempre o nome real do remetente */}
+                        <p className="text-xs font-medium">
+                          {message.senderName}
+                        </p>
                         <p className="text-sm">{message.content}</p>
                         <p className="text-xs opacity-70 mt-1">
                           {formatTime(message.timestamp)}
