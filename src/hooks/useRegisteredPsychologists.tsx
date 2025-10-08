@@ -23,7 +23,7 @@ interface RegisteredPsychologist {
 export const useRegisteredPsychologists = () => {
   const [psychologists, setPsychologists] = useState<RegisteredPsychologist[]>([]);
 
-  useEffect(() => {
+  const loadPsychologists = () => {
     const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
     const psychologistUsers = registeredUsers.filter((user: any) => user.type === "professional");
     
@@ -34,7 +34,7 @@ export const useRegisteredPsychologists = () => {
         '{"attendanceTypes": {"remoto": true, "presencial": false}, "address": ""}'
       );
       
-      // Carregar preço configurado - usar a chave correta
+      // Carregar preço configurado
       const professionalPrices = JSON.parse(localStorage.getItem("professionalPrices") || "{}");
       const userPrice = professionalPrices[user.id] || 150;
 
@@ -56,6 +56,25 @@ export const useRegisteredPsychologists = () => {
     });
 
     setPsychologists(formattedPsychologists);
+  };
+
+  useEffect(() => {
+    loadPsychologists();
+
+    // Escutar mudanças no localStorage
+    const handleStorageChange = () => {
+      loadPsychologists();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Também verificar periodicamente para mudanças na mesma aba
+    const interval = setInterval(loadPsychologists, 2000);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
   }, []);
 
   return { psychologists };

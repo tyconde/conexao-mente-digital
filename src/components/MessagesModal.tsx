@@ -15,7 +15,7 @@ interface MessagesModalProps {
   recipientId?: string;
   recipientName?: string;
   userId: string;
-  userType: "patient" | "psychologist";
+  userType: "patient" | "professional"; // aqui muda de "psychologist" para "professional"
   initialConversationId?: string;
 }
 

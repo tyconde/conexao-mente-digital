@@ -4,7 +4,7 @@ import { useAuth } from "./useAuth";
 
 export interface Notification {
   id: number;
-  type: "appointment_request" | "appointment_approved" | "appointment_rejected";
+  type: "appointment_request" | "appointment_approved" | "appointment_rejected" | "message";
   title: string;
   message: string;
   appointmentId?: number;
@@ -30,7 +30,7 @@ export const useNotifications = () => {
     if (savedNotifications) {
       const allNotifications = JSON.parse(savedNotifications);
       const userNotifications = allNotifications.filter(
-        (notification: Notification) => notification.toUserId === user?.id
+        (notification: Notification) => Number(notification.toUserId) === Number(user?.id)
       );
       setNotifications(userNotifications);
     }
@@ -49,7 +49,7 @@ export const useNotifications = () => {
     allNotifications.push(newNotification);
     localStorage.setItem("notifications", JSON.stringify(allNotifications));
     
-    if (notification.toUserId === user?.id) {
+    if (Number(notification.toUserId) === Number(user?.id)) {
       setNotifications(prev => [newNotification, ...prev]);
     }
   };

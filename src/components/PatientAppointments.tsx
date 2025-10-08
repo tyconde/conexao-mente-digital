@@ -168,10 +168,12 @@ export const PatientAppointments = () => {
       </div>
 
       <MessagesModal
-        isOpen={showMessages}
-        onClose={() => setShowMessages(false)}
+        open={showMessages}
+        onOpenChange={setShowMessages}
         recipientId={selectedProfessional?.id}
         recipientName={selectedProfessional?.name}
+        userId={user?.id?.toString() || ""}
+        userType="patient"
       />
     </>
   );

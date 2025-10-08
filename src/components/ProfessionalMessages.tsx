@@ -105,8 +105,10 @@ export const ProfessionalMessages = () => {
       </Card>
 
       <MessagesModal
-        isOpen={showMessages}
-        onClose={() => setShowMessages(false)}
+        open={showMessages}
+        onOpenChange={setShowMessages}
+        userId={user?.id?.toString() || ""}
+        userType="professional"
       />
     </>
   );

@@ -161,10 +161,12 @@ export const ProfessionalCard = ({
       />
 
       <MessagesModal
-        isOpen={showMessagesModal}
-        onClose={() => setShowMessagesModal(false)}
+        open={showMessagesModal}
+        onOpenChange={setShowMessagesModal}
         recipientId={id.toString()}
         recipientName={name}
+        userId={user?.id?.toString() || ""}
+        userType="patient"
       />
     </>
   );

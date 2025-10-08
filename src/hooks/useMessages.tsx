@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNotifications } from "./useNotifications";
 
 export interface Message {
   id: number;
@@ -27,6 +28,7 @@ export interface Conversation {
 
 export const useMessages = (userId?: string, userType?: "patient" | "professional", userName?: string) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     if (userId && userType) {
@@ -95,6 +97,20 @@ export const useMessages = (userId?: string, userType?: "patient" | "professiona
 
     localStorage.setItem("conversations", JSON.stringify(all));
     loadConversations();
+
+    // Envia notificação para o destinatário
+    try {
+      addNotification({
+        type: "message",
+        title: "Nova mensagem",
+        message: `${userName} enviou uma mensagem: \"${content}\"`,
+        fromUserId: Number(userId),
+        fromUserName: userName || "",
+        toUserId: Number(receiverId),
+      });
+    } catch (e) {
+      // silenciar erros de notificação para não quebrar envio de mensagens
+    }
   };
 
   const markAsRead = (conversationId: string) => {

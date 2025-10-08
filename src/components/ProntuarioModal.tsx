@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Plus, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useProntuarios } from "@/hooks/useProntuarios";
+import { Prontuario, useProntuarios } from "@/hooks/useProntuarios";
 import { useAuth } from "@/hooks/useAuth";
 
 interface ProntuarioModalProps {
@@ -16,6 +16,10 @@ interface ProntuarioModalProps {
   onClose: () => void;
   patientName: string;
   prontuarioId?: number;
+  editingProntuario?: any; // ou o tipo correto do prontuário
+  addProntuario?: (prontuario: Omit<Prontuario, "id" | "dataCriacao" | "dataUltimaAtualizacao">) => void;
+  updateProntuario?: (id: string, updates: Partial<Prontuario>) => void;
+  deleteProntuario?: (id: number) => void;
 }
 
 export const ProntuarioModal = ({ isOpen, onClose, patientName, prontuarioId }: ProntuarioModalProps) => {

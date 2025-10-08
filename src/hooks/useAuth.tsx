@@ -94,7 +94,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem("currentUser");
-    localStorage.removeItem("appointments");
+    // Não removemos mais os agendamentos no logout para preservar dados entre contas
   };
 
   const clearAllUsers = () => {

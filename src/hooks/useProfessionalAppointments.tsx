@@ -5,7 +5,7 @@ import { useToast } from "./use-toast";
 
 export interface Appointment {
   id: number;
-  patientId: number | string;
+  patientId: string | number;
   patientName: string;
   patientEmail: string;
   professionalId: number;
@@ -25,30 +25,54 @@ export const useProfessionalAppointments = () => {
   const { toast } = useToast();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
-  // Carrega os agendamentos do profissional logado
   const loadAppointments = () => {
-    const savedAppointments = localStorage.getItem("appointments");
-    if (savedAppointments && user?.id) {
-      const allAppointments: Appointment[] = JSON.parse(savedAppointments);
-      const professionalAppointments = allAppointments.filter(
-        apt => apt.professionalId === Number(user.id)
-      );
-      setAppointments(professionalAppointments);
+    if (!user?.id) {
+      setAppointments([]);
+      return;
+    }
+    
+    const saved = localStorage.getItem("appointments");
+    if (saved) {
+      const all: Appointment[] = JSON.parse(saved).map((a: any) => ({
+        ...a,
+        id: Number(a.id),
+        professionalId: Number(a.professionalId),
+        patientId: typeof a.patientId === "string" ? a.patientId : Number(a.patientId),
+      }));
+      const filtered = all.filter(a => a.professionalId === Number(user.id));
+      setAppointments(filtered);
+    } else {
+      setAppointments([]);
     }
   };
 
   useEffect(() => {
     loadAppointments();
 
-    // Listener para atualizações em tempo real no localStorage
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === "appointments") {
         loadAppointments();
       }
     };
+
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
   }, [user?.id]);
+
+  const addAppointment = (appointment: Omit<Appointment, "id" | "createdAt">) => {
+    const newAppointment: Appointment = {
+      ...appointment,
+      id: Date.now(),
+      createdAt: new Date().toISOString(),
+    };
+
+    const saved = localStorage.getItem("appointments");
+    const all: Appointment[] = saved ? JSON.parse(saved) : [];
+    all.push(newAppointment);
+    localStorage.setItem("appointments", JSON.stringify(all));
+
+    loadAppointments();
+  };
 
   const updateAppointment = (id: number, updates: Partial<Appointment>) => {
     const savedAppointments = localStorage.getItem("appointments");
@@ -62,7 +86,10 @@ export const useProfessionalAppointments = () => {
     allAppointments[index] = updatedAppointment;
     localStorage.setItem("appointments", JSON.stringify(allAppointments));
 
-    // Notificação para o paciente
+    // 🔄 Força recarregar local
+    loadAppointments();
+
+    // Notificações...
     if (updates.status === "confirmada") {
       addNotification({
         type: "appointment_approved",
@@ -94,28 +121,13 @@ export const useProfessionalAppointments = () => {
         description: "O paciente foi notificado sobre a rejeição.",
       });
     }
-
-    loadAppointments();
   };
 
-  const addAppointment = (appointment: Omit<Appointment, "id">) => {
-    const newAppointment: Appointment = {
-      ...appointment,
-      id: Date.now(),
-      createdAt: new Date().toISOString(),
-    };
-
-    const savedAppointments = localStorage.getItem("appointments");
-    const allAppointments = savedAppointments ? JSON.parse(savedAppointments) : [];
-    allAppointments.push(newAppointment);
-    localStorage.setItem("appointments", JSON.stringify(allAppointments));
-
-    loadAppointments();
-  };
 
   return {
     appointments,
-    updateAppointment,
     addAppointment,
+    updateAppointment,
+    setAppointments,
   };
 };

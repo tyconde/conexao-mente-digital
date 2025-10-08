@@ -31,8 +31,17 @@ export const PriceConfigModal = ({ isOpen, onClose, currentPrice, onPriceUpdate 
       return;
     }
 
-    // Salvar preço no localStorage
+    // Salvar preço no objeto professionalPrices
+    const professionalPrices = JSON.parse(localStorage.getItem("professionalPrices") || "{}");
+    professionalPrices[user?.id] = priceValue;
+    localStorage.setItem("professionalPrices", JSON.stringify(professionalPrices));
+    
+    // Também manter a chave individual para compatibilidade
     localStorage.setItem(`consultation_price_${user?.id}`, JSON.stringify(priceValue));
+    
+    // Disparar evento para atualizar em tempo real
+    window.dispatchEvent(new Event("storage"));
+    
     onPriceUpdate(priceValue);
 
     toast({

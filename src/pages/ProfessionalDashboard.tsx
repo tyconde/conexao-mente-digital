@@ -28,6 +28,8 @@ import { PatientsSection } from "@/components/PatientsSection";
 import { ReportsSection } from "@/components/ReportsSection";
 import { useMessages } from "@/hooks/useMessages";
 import { MessagesModal } from "@/components/MessagesModal";
+import { CreateAppointmentModal } from "../components/CreateAppointmentModal";
+
 
 const ProfessionalDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -38,11 +40,13 @@ const ProfessionalDashboard = () => {
   const [editingProntuario, setEditingProntuario] = useState(null);
   const [selectedPatientName, setSelectedPatientName] = useState("");
   const { user } = useAuth();
-  const { appointments, addAppointment, updateAppointment } = useProfessionalAppointments();
+  const { appointments, addAppointment, updateAppointment, setAppointments } = useProfessionalAppointments();
   const { prontuarios, addProntuario, updateProntuario, deleteProntuario } = useProntuarios();
   const { conversations, sendMessage, markAsRead } = useMessages(user?.id?.toString() || "", "professional");
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedRecipient, setSelectedRecipient] = useState<{ id: string; name: string } | null>(null);
 
   // Improved redirect logic - only redirect if user is confirmed to not be professional
   useEffect(() => {
@@ -58,12 +62,46 @@ const ProfessionalDashboard = () => {
         return;
       }
     };
-
     // Add a small delay to ensure auth state is properly loaded
     const timeoutId = setTimeout(checkAuth, 100);
     
     return () => clearTimeout(timeoutId);
   }, [user]);
+
+  const loadAppointmentsFromStorage = () => {
+    if (!user?.id) return;
+
+    const stored = localStorage.getItem("appointments");
+    if (stored) {
+      const all = JSON.parse(stored);
+      const filtered = all.filter((apt: any) => Number(apt.professionalId) === Number(user.id));
+      setAppointments(filtered);
+    }
+  };
+
+  useEffect(() => {
+    loadAppointmentsFromStorage();
+  }, [activeTab, user?.id]);
+
+  // Listener para detectar mudanças no localStorage
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const handleStorageChange = () => {
+      loadAppointmentsFromStorage();
+    };
+
+    // Listener customizado para mudanças diretas
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Intervalo para verificar mudanças (fallback para mudanças na mesma aba)
+    const interval = setInterval(handleStorageChange, 1000);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [user?.id]);
 
   // Show loading state while checking authentication
   if (!user) {
@@ -97,6 +135,9 @@ const ProfessionalDashboard = () => {
   // Get professional's price
   const consultationPrice = JSON.parse(localStorage.getItem(`consultation_price_${user?.id}`) || "150");
 
+  // Calcular apenas consultas confirmadas do mês
+  const confirmedThisMonth = thisMonthAppointments.filter(apt => apt.status === "confirmada");
+
   const stats = [
     {
       title: "Pacientes Ativos",
@@ -107,14 +148,14 @@ const ProfessionalDashboard = () => {
     },
     {
       title: "Consultas Este Mês",
-      value: thisMonthAppointments.length.toString(),
+      value: confirmedThisMonth.length.toString(),
       change: "+8%",
       icon: Calendar,
       color: "text-green-600"
     },
     {
       title: "Receita Mensal",
-      value: `R$ ${(thisMonthAppointments.length * consultationPrice).toLocaleString()}`,
+      value: `R$ ${(confirmedThisMonth.length * consultationPrice).toLocaleString()}`,
       change: "+15%",
       icon: DollarSign,
       color: "text-purple-600"
@@ -145,7 +186,24 @@ const ProfessionalDashboard = () => {
     .slice(0, 5);
 
   const handleCreateAppointment = (appointmentData: any) => {
-    addAppointment(appointmentData);
+    // Garantir consistência do formato e chave de armazenamento
+    const saved = localStorage.getItem("appointments");
+    const all = saved ? JSON.parse(saved) : [];
+
+    const enriched = {
+      ...appointmentData,
+      id: Date.now(),
+      professionalId: Number(user.id),
+      professionalName: user.name,
+      patientId: appointmentData.patientId ?? Date.now(),
+      status: appointmentData.status || "pendente",
+      createdAt: new Date().toISOString(),
+    };
+
+    const updated = [...all, enriched];
+    localStorage.setItem("appointments", JSON.stringify(updated));
+    // Atualiza estado local filtrando por profissional
+    setAppointments(updated.filter((apt: any) => Number(apt.professionalId) === Number(user.id)));
   };
 
   const handleEditProntuario = (prontuario: any) => {
@@ -173,6 +231,11 @@ const ProfessionalDashboard = () => {
     setShowProntuarioModal(true);
   };
 
+  const handleOpenMessage = (patientId: string | number, patientName: string) => {
+    setSelectedRecipient({ id: String(patientId), name: patientName });
+    setIsMessagesOpen(true);
+  };
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const today = new Date();
@@ -195,12 +258,26 @@ const ProfessionalDashboard = () => {
       : "bg-green-100 text-green-800";
   };
 
-  const handleApproveAppointment = (appointmentId: number) => {
-    updateAppointment(appointmentId, { status: "confirmada" });
+  const handleApproveAppointment = (id: number) => {
+    updateAppointment(id, { status: "confirmada" });
+    setAppointments((prev) =>
+      prev.map((apt) =>
+        apt.id === id ? { ...apt, status: "confirmada" } : apt
+      )
+    );
+    // Força atualização
+    window.dispatchEvent(new Event("storage"));
   };
 
-  const handleRejectAppointment = (appointmentId: number) => {
-    updateAppointment(appointmentId, { status: "cancelada" });
+  const handleRejectAppointment = (id: number) => {
+    updateAppointment(id, { status: "cancelada" });
+    setAppointments((prev) =>
+      prev.map((apt) =>
+        apt.id === id ? { ...apt, status: "cancelada" } : apt
+      )
+    );
+    // Força atualização
+    window.dispatchEvent(new Event("storage"));
   };
 
   return (
@@ -501,65 +578,59 @@ const ProfessionalDashboard = () => {
                 <p className="text-gray-600">Visualize e gerencie todos os seus agendamentos</p>
               </div>
               <Button 
-                onClick={() => setShowNewAppointmentModal(true)}
+                onClick={() => setShowCreateModal(true)}
                 className="flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
-                Novo Agendamento
+                Criar Novo Agendamento
               </Button>
             </div>
 
             {/* Seção de solicitações pendentes */}
             {pendingRequests.length > 0 && (
-              <Card className="border-orange-200">
+              <Card className="border-yellow-200 bg-yellow-50">
                 <CardHeader>
-                  <CardTitle className="text-orange-800">
-                    Solicitações Pendentes ({pendingRequests.length})
-                  </CardTitle>
+                  <CardTitle className="text-yellow-800">Solicitações Pendentes ({pendingRequests.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {pendingRequests.map((request) => (
-                      <div key={request.id} className="flex items-center justify-between p-4 bg-orange-50 rounded-lg">
-                        <div className="flex items-center space-x-4">
-                          <Avatar>
-                            <AvatarFallback>
-                              {request.patientName.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-gray-900">{request.patientName}</p>
-                            <p className="text-sm text-gray-600">{request.patientEmail}</p>
-                            <p className="text-sm text-gray-500">{request.type}</p>
-                            <Badge className={`text-xs ${getAttendanceTypeBadge(request.attendanceType)}`}>
-                              {getAttendanceTypeLabel(request.attendanceType)}
-                            </Badge>
-                          </div>
+                      <div key={request.id} className="flex justify-between items-center bg-white p-4 rounded shadow">
+                        <div>
+                          <p className="font-medium text-gray-900">{request.patientName}</p>
+                          <p className="text-sm text-gray-600">{request.type}</p>
+                          <p className="text-sm text-gray-500">{formatDate(request.date)} às {request.time}</p>
+                          <p className="text-sm text-gray-500">{request.patientEmail}</p>
+                          <Badge className={`text-xs ${getAttendanceTypeBadge(request.attendanceType)} mt-1`}>
+                            {getAttendanceTypeLabel(request.attendanceType)}
+                          </Badge>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <p className="font-medium text-gray-900">{request.date} às {request.time}</p>
-                            <Badge className="bg-yellow-100 text-yellow-800">
-                              Aguardando aprovação
-                            </Badge>
-                          </div>
+                        <div className="flex flex-col gap-2 text-right">
                           <div className="flex gap-2">
                             <Button
                               size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white"
                               onClick={() => handleApproveAppointment(request.id)}
-                              className="bg-green-600 hover:bg-green-700"
                             >
                               Aprovar
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleRejectAppointment(request.id)}
                               className="text-red-600 border-red-300 hover:bg-red-50"
+                              onClick={() => handleRejectAppointment(request.id)}
                             >
                               Rejeitar
                             </Button>
                           </div>
+                          <Button
+                            size="sm"
+                            variant="link"
+                            className="text-blue-600 underline p-0"
+                            onClick={() => handleOpenMessage(request.patientId, request.patientName)}
+                          >
+                            Enviar mensagem
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -570,66 +641,52 @@ const ProfessionalDashboard = () => {
 
             {/* Lista de todos os agendamentos */}
             <Card>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {appointments.length > 0 ? (
-                    appointments
-                      .sort((a, b) => {
-                        if (a.date !== b.date) return b.date.localeCompare(a.date);
-                        return b.time.localeCompare(a.time);
-                      })
-                      .map((appointment) => (
-                        <div key={appointment.id} className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="flex items-center space-x-4">
-                            <Avatar>
-                              <AvatarFallback>
-                                {appointment.patientName.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium text-gray-900">{appointment.patientName}</p>
-                              <p className="text-sm text-gray-600">{appointment.patientEmail}</p>
-                              <p className="text-sm text-gray-500">{appointment.type}</p>
-                              <Badge className={`text-xs ${getAttendanceTypeBadge(appointment.attendanceType)}`}>
-                                {getAttendanceTypeLabel(appointment.attendanceType)}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium text-gray-900">{appointment.date} às {appointment.time}</p>
-                            <Badge 
-                              className={`mt-1 ${
-                                appointment.status === "confirmada" 
-                                  ? "bg-green-100 text-green-800" 
-                                  : appointment.status === "pendente"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
-                            >
-                              {appointment.status}
-                            </Badge>
-                          </div>
-                        </div>
-                      ))
-                  ) : (
-                    <div className="text-center py-12 text-gray-500">
-                      <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                      <p className="text-lg font-medium mb-2">Nenhum agendamento encontrado</p>
-                      <p className="mb-4">Comece criando seu primeiro agendamento</p>
-                      <Button 
-                        onClick={() => setShowNewAppointmentModal(true)}
-                        className="flex items-center gap-2"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Criar Agendamento
-                      </Button>
-                    </div>
-                  )}
-                </div>
+              <CardHeader>
+                <CardTitle>Todos os Agendamentos</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {appointments.length > 0 ? (
+                  appointments
+                    .sort((a, b) => {
+                      if (a.date !== b.date) return a.date.localeCompare(b.date);
+                      return a.time.localeCompare(b.time);
+                    })
+                    .map((appointment) => (
+                      <div key={appointment.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                        <p><strong>Paciente:</strong> {appointment.patientName}</p>
+                        <p><strong>Data:</strong> {appointment.date}</p>
+                        <p><strong>Hora:</strong> {appointment.time}</p>
+                        <p><strong>Tipo:</strong> {appointment.type}</p>
+                        <p><strong>Email:</strong> {appointment.patientEmail}</p>
+                        <p><strong>Observações:</strong> {appointment.notes || "Nenhuma"}</p>
+                        <Badge 
+                          className={`mt-2 ${
+                            appointment.status === "confirmada" 
+                              ? "bg-green-100 text-green-800" 
+                              : appointment.status === "pendente"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {appointment.status}
+                        </Badge>
+                      </div>
+                    ))
+                ) : (
+                  <p className="text-gray-500">Nenhum agendamento encontrado.</p>
+                )}
               </CardContent>
             </Card>
+
+            <CreateAppointmentModal 
+              isOpen={showCreateModal} 
+              onClose={() => setShowCreateModal(false)} 
+              onCreate={handleCreateAppointment}
+            />
           </div>
         )}
+
+
 
         {activeTab === "prontuarios" && (
           <div className="space-y-6">
@@ -801,11 +858,18 @@ const ProfessionalDashboard = () => {
         onClose={() => setShowScheduleConfigModal(false)}
       />
 
-            <MessagesModal
-        key={selectedConversationId} // 🔑 força recriar modal ao selecionar conversa
+      <MessagesModal
+        key={selectedConversationId}
         open={isMessagesOpen}
-        onOpenChange={setIsMessagesOpen}
+        onOpenChange={(open) => {
+          setIsMessagesOpen(open);
+          if (!open) setSelectedRecipient(null);
+        }}
         initialConversationId={selectedConversationId || undefined}
+        recipientId={selectedRecipient?.id}
+        recipientName={selectedRecipient?.name}
+        userId={user?.id?.toString() || ""}
+        userType="professional"
       />
 
     </div>
