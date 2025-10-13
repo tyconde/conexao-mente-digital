@@ -139,9 +139,22 @@ const PatientDashboard = () => {
           </Button>
         </div>
 
-        {/* Add appointments section before the main grid */}
+        {/* Quick access to appointments */}
         <div className="mb-8">
-          <PatientAppointments />
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">Meus Agendamentos</h3>
+                  <p className="text-sm text-gray-600">Visualize e gerencie suas consultas</p>
+                </div>
+                <Button onClick={() => window.location.href = "/appointments"}>
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Ver Agendamentos
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid lg:grid-cols-4 gap-8">

@@ -68,10 +68,18 @@ export const useNotifications = () => {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  const clearAllNotifications = () => {
+    const allNotifications = JSON.parse(localStorage.getItem("notifications") || "[]");
+    const filtered = allNotifications.filter((n: Notification) => n.toUserId !== user?.id);
+    localStorage.setItem("notifications", JSON.stringify(filtered));
+    setNotifications([]);
+  };
+
   return {
     notifications,
     unreadCount,
     addNotification,
     markAsRead,
+    clearAllNotifications,
   };
 };

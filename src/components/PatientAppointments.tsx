@@ -1,23 +1,49 @@
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, MapPin, Monitor, X, MessageCircle } from "lucide-react";
 import { useProfessionalAppointments } from "@/hooks/useProfessionalAppointments";
 import { useAuth } from "@/hooks/useAuth";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MessagesModal } from "./MessagesModal";
 
 export const PatientAppointments = () => {
   const { user } = useAuth();
-  const { appointments, updateAppointment } = useProfessionalAppointments();
+  const { updateAppointment } = useProfessionalAppointments();
   const [showMessages, setShowMessages] = useState(false);
   const [selectedProfessional, setSelectedProfessional] = useState<{id: string, name: string} | null>(null);
+  const [userAppointments, setUserAppointments] = useState<any[]>([]);
 
-  // Filtrar apenas agendamentos do usuário logado
-  const userAppointments = appointments.filter(apt => 
-    apt.patientEmail === user?.email
-  );
+  // Carrega agendamentos do paciente e atualiza em tempo real
+  useEffect(() => {
+    const load = () => {
+      const saved = localStorage.getItem("appointments");
+      const all = saved ? JSON.parse(saved) : [];
+      const normalized = all.map((a: any) => ({
+        ...a,
+        id: Number(a.id),
+        professionalId: Number(a.professionalId),
+        patientId: typeof a.patientId === "string" ? a.patientId : Number(a.patientId),
+      }));
+      const filtered = normalized.filter(
+        (apt: any) => apt.patientEmail === user?.email || String(apt.patientId) === String(user?.id)
+      );
+      setUserAppointments(filtered);
+    };
+
+    load();
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "appointments") load();
+    };
+    window.addEventListener("storage", onStorage);
+    const interval = setInterval(load, 2000);
+
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      clearInterval(interval);
+    };
+  }, [user?.email, user?.id]);
 
   const handleCancelAppointment = (id: number) => {
     if (confirm("Tem certeza que deseja cancelar este agendamento?")) {
@@ -25,6 +51,8 @@ export const PatientAppointments = () => {
         status: "cancelada",
         notes: "Cancelado pelo paciente"
       });
+      // Atualiza imediatamente a lista local
+      setUserAppointments(prev => prev.map(ap => ap.id === id ? { ...ap, status: "cancelada", notes: "Cancelado pelo paciente" } : ap));
     }
   };
 
@@ -36,29 +64,28 @@ export const PatientAppointments = () => {
     setShowMessages(true);
   };
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "confirmada":
-        return "default";
+        return (
+          <Badge className="bg-green-100 text-green-800 border-green-200">
+            Confirmada
+          </Badge>
+        );
       case "pendente":
-        return "secondary";
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+            Pendente
+          </Badge>
+        );
       case "cancelada":
-        return "destructive";
+        return (
+          <Badge className="bg-red-100 text-red-800 border-red-200">
+            Cancelada
+          </Badge>
+        );
       default:
-        return "secondary";
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "confirmada":
-        return "Confirmada";
-      case "pendente":
-        return "Pendente";
-      case "cancelada":
-        return "Cancelada";
-      default:
-        return status;
+        return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
@@ -72,12 +99,16 @@ export const PatientAppointments = () => {
   };
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+    // Parse date in UTC to avoid timezone issues
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    
     return date.toLocaleDateString('pt-BR', { 
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 
-      day: 'numeric' 
+      day: 'numeric',
+      timeZone: 'America/Sao_Paulo'
     });
   };
 
@@ -101,16 +132,19 @@ export const PatientAppointments = () => {
             <CardContent className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-medium text-lg">
-                      Consulta - {appointment.type}
-                    </h4>
-                    <Badge variant={getStatusBadgeVariant(appointment.status)}>
-                      {getStatusLabel(appointment.status)}
-                    </Badge>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-medium text-lg">
+                        {appointment.professionalName || "Profissional"}
+                      </h4>
+                      {getStatusBadge(appointment.status)}
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      {appointment.type}
+                    </p>
                   </div>
                   
-                  <div className="space-y-1 text-sm text-gray-600">
+                  <div className="space-y-1 text-sm text-gray-600 mt-3">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
                       <span>{formatDate(appointment.date)}</span>
@@ -143,7 +177,7 @@ export const PatientAppointments = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleSendMessage(appointment.professionalId, "Profissional")}
+                    onClick={() => handleSendMessage(appointment.professionalId, appointment.professionalName || "Profissional")}
                   >
                     <MessageCircle className="w-4 h-4 mr-1" />
                     Mensagem

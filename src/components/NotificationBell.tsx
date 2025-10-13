@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Bell } from "lucide-react";
+import { useState } from "react";
+import { Bell, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useProfessionalAppointments } from "@/hooks/useProfessionalAppointments";
 
 export const NotificationBell = () => {
-  const { notifications, unreadCount, markAsRead } = useNotifications();
+  const { notifications, unreadCount, markAsRead, clearAllNotifications } = useNotifications();
   const { updateAppointment } = useProfessionalAppointments();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -74,7 +74,24 @@ export const NotificationBell = () => {
       <PopoverContent className="w-80 p-0" align="end">
         <Card>
           <CardHeader className="border-b">
-            <CardTitle className="text-lg">Notificações</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Notificações</CardTitle>
+              {notifications.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm("Deseja limpar todas as notificações?")) {
+                      clearAllNotifications();
+                    }
+                  }}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {notifications.length > 0 ? (
