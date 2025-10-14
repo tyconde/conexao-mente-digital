@@ -25,6 +25,7 @@ function CustomNav({
   return (
     <div className="flex items-center justify-between px-2 py-1">
       <button
+        type="button"
         onClick={onPreviousClick}
         className={cn(buttonVariants({ variant: "ghost" }), "h-8 w-8 p-0")}
       >
@@ -36,6 +37,7 @@ function CustomNav({
       </div>
 
       <button
+        type="button"
         onClick={onNextClick}
         className={cn(buttonVariants({ variant: "ghost" }), "h-8 w-8 p-0")}
       >
@@ -50,7 +52,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
     <DayPicker
       showOutsideDays={showOutsideDays}
       locale={ptBR}
-      className={cn("p-3", className)}
+      className={cn("p-3 pointer-events-auto", className)}
       classNames={{
         months: "grid grid-cols-1 gap-4",
         table: "w-full border-collapse",

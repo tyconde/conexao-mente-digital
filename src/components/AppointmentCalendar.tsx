@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAvailableSlots } from "@/hooks/useAvailableSlots";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 interface AppointmentCalendarProps {
   isOpen: boolean;
@@ -28,6 +29,32 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
   const [appointmentType, setAppointmentType] = useState("Primeira consulta");
   const [attendanceType, setAttendanceType] = useState("remoto");
   const [notes, setNotes] = useState("");
+  const [showDuplicateAlert, setShowDuplicateAlert] = useState(false);
+  const [hasHadAppointment, setHasHadAppointment] = useState(false);
+
+  // Verificar se paciente já teve consulta com este profissional
+  useEffect(() => {
+    if (user && psychologistId) {
+      const savedAppointments = localStorage.getItem("appointments");
+      if (savedAppointments) {
+        const allAppointments = JSON.parse(savedAppointments);
+        const hadAppointment = allAppointments.some((apt: any) => 
+          (apt.patientId === user.id || apt.patientEmail === user.email) &&
+          apt.professionalId === psychologistId &&
+          apt.status === "confirmada"
+        );
+        setHasHadAppointment(hadAppointment);
+        if (hadAppointment && appointmentType === "Primeira consulta") {
+          setAppointmentType("Consulta de retorno");
+        }
+      }
+    }
+  }, [user, psychologistId]);
+
+  // Resetar selectedTime quando mudar de data
+  useEffect(() => {
+    setSelectedTime("");
+  }, [selectedDate]);
 
   const generateTimeSlots = () => {
     if (!selectedDate || !professionalSettings) return [];
@@ -46,28 +73,55 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
     const [startHour, startMinute] = daySchedule.start.split(":").map(Number);
     const [endHour, endMinute] = daySchedule.end.split(":").map(Number);
 
+    const now = new Date();
+    const isToday = selectedDate.toDateString() === now.toDateString();
+
     for (let hour = startHour; hour < endHour; hour++) {
-      slots.push(`${hour.toString().padStart(2, "0")}:00`);
-      if (hour + 1 < endHour || (hour + 1 === endHour && endMinute >= 30)) {
-        slots.push(`${hour.toString().padStart(2, "0")}:30`);
+      const time00 = `${hour.toString().padStart(2, "0")}:00`;
+      const time30 = `${hour.toString().padStart(2, "0")}:30`;
+      
+      // Se for hoje, só adiciona horários futuros
+      if (isToday) {
+        const [h00, m00] = time00.split(":").map(Number);
+        if (h00 > now.getHours() || (h00 === now.getHours() && m00 > now.getMinutes())) {
+          slots.push(time00);
+        }
+        
+        if (hour + 1 < endHour || (hour + 1 === endHour && endMinute >= 30)) {
+          const [h30, m30] = time30.split(":").map(Number);
+          if (h30 > now.getHours() || (h30 === now.getHours() && m30 > now.getMinutes())) {
+            slots.push(time30);
+          }
+        }
+      } else {
+        slots.push(time00);
+        if (hour + 1 < endHour || (hour + 1 === endHour && endMinute >= 30)) {
+          slots.push(time30);
+        }
       }
     }
     return slots;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedDate || !selectedTime || !user) {
-      toast({ title: "Erro", description: "Preencha todos os campos.", variant: "destructive" });
-      return;
-    }
+  const checkExistingAppointmentOnDate = (dateStr: string) => {
+    if (!user) return null;
+    
+    const savedAppointments = localStorage.getItem("appointments");
+    if (!savedAppointments) return null;
+    
+    const allAppointments = JSON.parse(savedAppointments);
+    return allAppointments.find((apt: any) => 
+      (apt.patientId === user.id || apt.patientEmail === user.email) &&
+      apt.date === dateStr &&
+      (apt.status === "confirmada" || apt.status === "pendente")
+    );
+  };
+
+  const proceedWithSubmit = () => {
+    if (!selectedDate || !selectedTime || !user) return;
 
     const dateStr = selectedDate.toISOString().split("T")[0];
-    if (!isTimeAvailable(dateStr, selectedTime)) {
-      toast({ title: "Horário indisponível", description: "Este horário não está disponível.", variant: "destructive" });
-      return;
-    }
-
+    
     const appointmentData = {
       patientId: user.id,
       patientName: user.name,
@@ -103,10 +157,57 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
 
     setSelectedDate(undefined);
     setSelectedTime("");
-    setAppointmentType("Primeira consulta");
+    setAppointmentType(hasHadAppointment ? "Consulta de retorno" : "Primeira consulta");
     setAttendanceType("remoto");
     setNotes("");
+    setShowDuplicateAlert(false);
     onClose();
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDate || !selectedTime || !user) {
+      toast({ title: "Erro", description: "Preencha todos os campos.", variant: "destructive" });
+      return;
+    }
+
+    const dateStr = selectedDate.toISOString().split("T")[0];
+    
+    // Verificar se horário está disponível
+    if (!isTimeAvailable(dateStr, selectedTime)) {
+      toast({ title: "Horário indisponível", description: "Este horário não está disponível.", variant: "destructive" });
+      return;
+    }
+
+    // Verificar se já tem consulta marcada neste horário
+    const savedAppointments = localStorage.getItem("appointments");
+    if (savedAppointments) {
+      const allAppointments = JSON.parse(savedAppointments);
+      const conflictingAppointment = allAppointments.find((apt: any) => 
+        apt.professionalId === psychologistId &&
+        apt.date === dateStr &&
+        apt.time === selectedTime &&
+        (apt.status === "confirmada" || apt.status === "pendente")
+      );
+      
+      if (conflictingAppointment) {
+        toast({ 
+          title: "Horário já ocupado", 
+          description: "Este horário já foi reservado. Por favor, escolha outro horário.", 
+          variant: "destructive" 
+        });
+        return;
+      }
+    }
+
+    // Verificar se já tem outra consulta no mesmo dia
+    const existingAppointment = checkExistingAppointmentOnDate(dateStr);
+    if (existingAppointment) {
+      setShowDuplicateAlert(true);
+      return;
+    }
+
+    proceedWithSubmit();
   };
 
   const isDateDisabled = (date: Date) => {
@@ -116,7 +217,45 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
     return !isDateAvailable(date.toISOString().split("T")[0]);
   };
 
+  const getBookedSlotsForDate = (date: Date) => {
+    const dateStr = date.toISOString().split("T")[0];
+    const savedAppointments = localStorage.getItem("appointments");
+    if (!savedAppointments) return [];
+    
+    const allAppointments = JSON.parse(savedAppointments);
+    return allAppointments
+      .filter((apt: any) => 
+        apt.professionalId === psychologistId && 
+        apt.date === dateStr && 
+        (apt.status === "confirmada" || apt.status === "pendente")
+      )
+      .map((apt: any) => apt.time);
+  };
+
+  const isDateFullyBooked = (date: Date) => {
+    const dateStr = date.toISOString().split("T")[0];
+    if (!isDateAvailable(dateStr)) return false;
+    
+    const dayOfWeek = date.getDay();
+    const weekDaysMap: { [key: number]: string } = {
+      0: "sunday", 1: "monday", 2: "tuesday", 3: "wednesday",
+      4: "thursday", 5: "friday", 6: "saturday"
+    };
+    
+    const dayKey = weekDaysMap[dayOfWeek];
+    const daySchedule = getDaySchedule(dayKey);
+    if (!daySchedule || !daySchedule.enabled) return false;
+    
+    const [startHour] = daySchedule.start.split(":").map(Number);
+    const [endHour] = daySchedule.end.split(":").map(Number);
+    const totalSlots = (endHour - startHour) * 2;
+    
+    const bookedSlots = getBookedSlotsForDate(date);
+    return bookedSlots.length >= totalSlots;
+  };
+
   const timeSlots = generateTimeSlots();
+  const bookedTimes = selectedDate ? getBookedSlotsForDate(selectedDate) : [];
 
   if (!professionalSettings) {
     return (
@@ -140,9 +279,47 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="w-full max-w-xs mx-auto">
+            <div className="w-full max-w-xs mx-auto space-y-3">
               <Label>Selecione a Data</Label>
-              <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} disabled={isDateDisabled} />
+              <Calendar 
+                mode="single" 
+                selected={selectedDate} 
+                onSelect={setSelectedDate} 
+                disabled={isDateDisabled}
+                modifiers={{
+                  available: (date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return date >= today && isDateAvailable(date.toISOString().split("T")[0]) && !isDateFullyBooked(date);
+                  },
+                  fullyBooked: (date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return date >= today && isDateFullyBooked(date);
+                  }
+                }}
+                modifiersClassNames={{
+                  available: "bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-100 hover:bg-green-200 dark:hover:bg-green-800/40",
+                  fullyBooked: "bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 hover:bg-amber-200 dark:hover:bg-amber-800/40",
+                  disabled: "opacity-30 cursor-not-allowed"
+                }}
+              />
+              
+              <div className="bg-muted/50 rounded-lg p-3 space-y-2 text-xs">
+                <div className="font-medium text-sm mb-2">Legenda:</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700"></div>
+                  <span>Disponível</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700"></div>
+                  <span>Parcialmente ocupado</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-muted border border-border opacity-50"></div>
+                  <span>Indisponível</span>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -152,7 +329,15 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
                   <Select value={selectedTime} onValueChange={setSelectedTime}>
                     <SelectTrigger><SelectValue placeholder="Selecione o horário" /></SelectTrigger>
                     <SelectContent>
-                      {timeSlots.map(time => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                      {timeSlots.map(time => (
+                        <SelectItem 
+                          key={time} 
+                          value={time}
+                          disabled={bookedTimes.includes(time)}
+                        >
+                          {time} {bookedTimes.includes(time) ? "(Ocupado)" : ""}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -163,7 +348,7 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
                 <Select value={appointmentType} onValueChange={setAppointmentType}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Primeira consulta">Primeira consulta</SelectItem>
+                    {!hasHadAppointment && <SelectItem value="Primeira consulta">Primeira consulta</SelectItem>}
                     <SelectItem value="Consulta de retorno">Consulta de retorno</SelectItem>
                     <SelectItem value="Sessão de terapia">Sessão de terapia</SelectItem>
                     <SelectItem value="Avaliação psicológica">Avaliação psicológica</SelectItem>
@@ -195,6 +380,21 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
           </div>
         </form>
       </DialogContent>
+
+      <AlertDialog open={showDuplicateAlert} onOpenChange={setShowDuplicateAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Consulta já agendada</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você já possui uma consulta agendada para este dia. Deseja continuar e agendar outra consulta no mesmo dia?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={proceedWithSubmit}>Continuar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };

@@ -5,14 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Clock, MapPin, Monitor, X, MessageCircle, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfessionalAppointments } from "@/hooks/useProfessionalAppointments";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useToast } from "@/hooks/use-toast";
 import { MessagesModal } from "@/components/MessagesModal";
 import { Navigation } from "@/components/Navigation";
 import { useNavigate } from "react-router-dom";
 
 export default function Appointments() {
   const { user } = useAuth();
-  const { updateAppointment } = useProfessionalAppointments();
+  const { addNotification } = useNotifications();
+  const { toast } = useToast();
   const [showMessages, setShowMessages] = useState(false);
   const [selectedProfessional, setSelectedProfessional] = useState<{id: string, name: string} | null>(null);
   const [userAppointments, setUserAppointments] = useState<any[]>([]);
@@ -50,11 +52,29 @@ export default function Appointments() {
 
   const handleCancelAppointment = (id: number) => {
     if (confirm("Tem certeza que deseja cancelar este agendamento?")) {
-      updateAppointment(id, { 
-        status: "cancelada",
-        notes: "Cancelado pelo paciente"
-      });
-      setUserAppointments(prev => prev.map(ap => ap.id === id ? { ...ap, status: "cancelada", notes: "Cancelado pelo paciente" } : ap));
+      const saved = localStorage.getItem("appointments");
+      const all = saved ? JSON.parse(saved) : [];
+      const index = all.findIndex((a: any) => Number(a.id) === Number(id));
+      if (index !== -1) {
+        const ap = all[index];
+        const updated = { ...ap, status: "cancelada", notes: "Cancelado pelo paciente" };
+        all[index] = updated;
+        localStorage.setItem("appointments", JSON.stringify(all));
+
+        // Notifica o profissional
+        addNotification({
+          type: "message",
+          title: "Consulta cancelada pelo paciente",
+          message: `${user?.name || "Paciente"} cancelou a consulta de ${updated.date} às ${updated.time}.`,
+          appointmentId: id,
+          fromUserId: user?.id || 0,
+          fromUserName: user?.name || "Paciente",
+          toUserId: Number(updated.professionalId),
+        });
+
+        setUserAppointments(prev => prev.map(appt => appt.id === id ? updated : appt));
+        toast({ title: "Consulta cancelada", description: "O profissional foi notificado." });
+      }
     }
   };
 
