@@ -24,6 +24,7 @@ import { AppointmentCalendar } from "@/components/AppointmentCalendar";
 import { DashboardFilters } from "@/components/DashboardFilters";
 import { PatientAppointments } from "@/components/PatientAppointments";
 import { MessagesModal } from "@/components/MessagesModal";
+import { MessagesButton } from "@/components/MessagesButton";
 
 const PatientDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -129,14 +130,17 @@ const PatientDashboard = () => {
               Encontre o psicólogo ideal para suas necessidades
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={() => window.location.href = "/"}
-            className="flex items-center"
-          >
-            <Home className="w-4 h-4 mr-2" />
-            Início
-          </Button>
+          <div className="flex gap-2">
+            <MessagesButton onClick={() => setShowMessages(true)} />
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = "/"}
+              className="flex items-center"
+            >
+              <Home className="w-4 h-4 mr-2" />
+              Início
+            </Button>
+          </div>
         </div>
 
         {/* Quick access to appointments */}

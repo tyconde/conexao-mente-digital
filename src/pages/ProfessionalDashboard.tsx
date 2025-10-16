@@ -29,6 +29,7 @@ import { ReportsSection } from "@/components/ReportsSection";
 import { useMessages } from "@/hooks/useMessages";
 import { MessagesModal } from "@/components/MessagesModal";
 import { CreateAppointmentModal } from "../components/CreateAppointmentModal";
+import { MessagesButton } from "@/components/MessagesButton";
 
 
 const ProfessionalDashboard = () => {
@@ -285,13 +286,16 @@ const ProfessionalDashboard = () => {
       <Navigation />
       
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Bem-vindo, {user.name}
-          </h1>
-          <p className="text-gray-600">
-            Gerencie sua prática profissional de forma eficiente
-          </p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Bem-vindo, {user.name}
+            </h1>
+            <p className="text-gray-600">
+              Gerencie sua prática profissional de forma eficiente
+            </p>
+          </div>
+          <MessagesButton onClick={() => setIsMessagesOpen(true)} />
         </div>
 
         {/* Navegação por abas */}
@@ -776,52 +780,97 @@ const ProfessionalDashboard = () => {
           />
         )}
 
-        {/* Outras abas placeholder */}
-        {["messages", "settings"].includes(activeTab) && (
+        {activeTab === "messages" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Central de Mensagens</h3>
+                <p className="text-gray-600">Gerencie suas conversas com os pacientes</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-gray-600">
+                  {conversations.length} conversa{conversations.length !== 1 ? 's' : ''}
+                </div>
+                {conversations.reduce((total, conv) => total + (conv.unreadCount || 0), 0) > 0 && (
+                  <Badge variant="destructive">
+                    {conversations.reduce((total, conv) => total + (conv.unreadCount || 0), 0)} não lidas
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            {conversations.length === 0 ? (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <MessageCircle className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                  <p className="text-gray-600 text-lg font-medium mb-2">Nenhuma mensagem ainda</p>
+                  <p className="text-gray-500 text-sm">
+                    As conversas com seus pacientes aparecerão aqui
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {conversations
+                  .sort((a, b) => new Date(b.lastMessageTime || 0).getTime() - new Date(a.lastMessageTime || 0).getTime())
+                  .map((conv) => (
+                    <Card
+                      key={conv.id}
+                      onClick={() => {
+                        markAsRead(conv.id);
+                        setSelectedConversationId(conv.id);
+                        setIsMessagesOpen(true);
+                      }}
+                      className="cursor-pointer hover:shadow-md transition-shadow"
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-start gap-3 flex-1">
+                            <Avatar>
+                              <AvatarFallback>
+                                {conv.patientName?.charAt(0).toUpperCase() || "P"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-medium text-gray-900">
+                                  {conv.patientName}
+                                </p>
+                                {(conv.unreadCount || 0) > 0 && (
+                                  <Badge variant="destructive" className="text-xs">
+                                    {conv.unreadCount} nova{conv.unreadCount !== 1 ? 's' : ''}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600 line-clamp-2">
+                                {conv.lastMessage}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right ml-4 flex-shrink-0">
+                            <p className="text-xs text-gray-500">
+                              {new Date(conv.lastMessageTime || "").toLocaleDateString('pt-BR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "settings" && (
           <div className="text-center py-12">
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {activeTab === "messages" && (
-  <div className="space-y-6">
-    <h3 className="text-lg font-medium text-gray-900">Central de Mensagens</h3>
-    {conversations.length === 0 ? (
-      <p className="text-gray-600">Nenhuma mensagem recebida até agora.</p>
-    ) : (
-      conversations.map((conv) => (
-        <Card
-  key={conv.id}
-  onClick={() => {
-    markAsRead(conv.id);
-    setSelectedConversationId(conv.id); // define conversa selecionada
-    setIsMessagesOpen(true); // abre modal
-  }}
-  className="cursor-pointer"
->
-          <CardContent className="flex justify-between items-center p-4">
-            <div>
-              <p className="font-medium text-gray-900">
-                {conv.patientName}
-              </p>
-              <p className="text-sm text-gray-600 truncate w-48">
-                {conv.lastMessage}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-500">{new Date(conv.lastMessageTime).toLocaleTimeString()}</p>
-              {conv.unreadCount > 0 && (
-                <Badge className="bg-red-100 text-red-800">
-                  {conv.unreadCount}
-                </Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ))
-    )}
-  </div>
-)}
-              {activeTab === "settings" && "Configurações do Perfil"}
+              Configurações do Perfil
             </h3>
-
           </div>
         )}
       </div>
