@@ -80,16 +80,20 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
       const time00 = `${hour.toString().padStart(2, "0")}:00`;
       const time30 = `${hour.toString().padStart(2, "0")}:30`;
       
-      // Se for hoje, só adiciona horários futuros
+      // Se for hoje, só adiciona horários futuros (com margem de 30 minutos)
       if (isToday) {
-        const [h00, m00] = time00.split(":").map(Number);
-        if (h00 > now.getHours() || (h00 === now.getHours() && m00 > now.getMinutes())) {
+        const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+        const time00InMinutes = hour * 60;
+        const time30InMinutes = hour * 60 + 30;
+        
+        // Adiciona o horário :00 se ainda estiver com pelo menos 30min de antecedência
+        if (time00InMinutes >= currentTimeInMinutes + 30) {
           slots.push(time00);
         }
         
+        // Adiciona o horário :30 se estiver dentro do range e com antecedência
         if (hour + 1 < endHour || (hour + 1 === endHour && endMinute >= 30)) {
-          const [h30, m30] = time30.split(":").map(Number);
-          if (h30 > now.getHours() || (h30 === now.getHours() && m30 > now.getMinutes())) {
+          if (time30InMinutes >= currentTimeInMinutes + 30) {
             slots.push(time30);
           }
         }

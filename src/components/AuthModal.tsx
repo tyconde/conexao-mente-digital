@@ -23,6 +23,9 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
     password: "",
     phone: "",
     address: "",
+    age: "",
+    profession: "",
+    maritalStatus: "",
     crp: "",
     specialty: ""
   });
@@ -50,6 +53,11 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
         phone: formData.phone,
         address: formData.address,
         type: userType,
+        ...(userType === "patient" && {
+          age: formData.age,
+          profession: formData.profession,
+          maritalStatus: formData.maritalStatus
+        }),
         ...(userType === "professional" && {
           crp: formData.crp,
           specialty: formData.specialty
@@ -76,6 +84,9 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
       password: "",
       phone: "",
       address: "",
+      age: "",
+      profession: "",
+      maritalStatus: "",
       crp: "",
       specialty: ""
     });
@@ -235,6 +246,38 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
                   placeholder="Rua, número, bairro, cidade - UF"
                 />
               </div>
+              {userType === "patient" && (
+                <>
+                  <div>
+                    <Label htmlFor="age">Idade</Label>
+                    <Input
+                      id="age"
+                      value={formData.age}
+                      onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                      required
+                      placeholder="Ex: 30 anos"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="profession">Profissão</Label>
+                    <Input
+                      id="profession"
+                      value={formData.profession}
+                      onChange={(e) => setFormData({ ...formData, profession: e.target.value })}
+                      placeholder="Ex: Engenheiro(a)"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="maritalStatus">Estado Civil</Label>
+                    <Input
+                      id="maritalStatus"
+                      value={formData.maritalStatus}
+                      onChange={(e) => setFormData({ ...formData, maritalStatus: e.target.value })}
+                      placeholder="Ex: Solteiro(a)"
+                    />
+                  </div>
+                </>
+              )}
               {userType === "professional" && (
                 <>
                   <div>

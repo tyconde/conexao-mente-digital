@@ -6,10 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Plus, Save } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FileText, Plus, Save, User, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Prontuario, useProntuarios } from "@/hooks/useProntuarios";
 import { useAuth } from "@/hooks/useAuth";
+import { usePatients } from "@/hooks/usePatients";
+import { useProfessionalAppointments } from "@/hooks/useProfessionalAppointments";
 
 interface ProntuarioModalProps {
   isOpen: boolean;
@@ -26,20 +29,44 @@ export const ProntuarioModal = ({ isOpen, onClose, patientName, prontuarioId }: 
   const { toast } = useToast();
   const { user } = useAuth();
   const { prontuarios, addProntuario, updateProntuario } = useProntuarios();
+  const { patients } = usePatients();
+  const { appointments } = useProfessionalAppointments();
+  
+  const [selectedPatient, setSelectedPatient] = useState(patientName);
+  
+  // Filtrar pacientes com consultas confirmadas
+  const confirmedPatients = patients.filter(p => p.confirmedAppointments > 0);
   
   // Buscar prontuário existente
   const existingProntuario = prontuarios.find(p => 
-    p.id === prontuarioId || p.paciente.toLowerCase() === patientName.toLowerCase()
+    p.id === prontuarioId || p.paciente.toLowerCase() === selectedPatient.toLowerCase()
+  );
+  
+  // Buscar dados do paciente selecionado
+  const selectedPatientData = patients.find(p => p.name === selectedPatient);
+  
+  // Buscar dados completos do usuário registrado
+  const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
+  const selectedUserData = registeredUsers.find((u: any) => 
+    u.name === selectedPatient && u.type === "patient"
+  );
+  
+  // Buscar consultas confirmadas e realizadas do paciente selecionado (data passada)
+  const today = new Date().toISOString().split('T')[0];
+  const patientCompletedAppointments = appointments.filter(apt => 
+    apt.patientName === selectedPatient && 
+    apt.status === "confirmada" &&
+    apt.date < today
   );
 
   const [formData, setFormData] = useState({
-    paciente: patientName,
+    paciente: selectedPatient,
     psicologo: user?.name || "",
-    idade: existingProntuario?.idade || "",
+    idade: existingProntuario?.idade || selectedPatientData?.age || "",
     profissao: existingProntuario?.profissao || "",
     estadoCivil: existingProntuario?.estadoCivil || "",
     telefone: existingProntuario?.telefone || "",
-    email: existingProntuario?.email || "",
+    email: existingProntuario?.email || selectedPatientData?.email || "",
     endereco: existingProntuario?.endereco || "",
     cpf: existingProntuario?.cpf || "",
     motivoConsulta: existingProntuario?.motivoConsulta || "",
@@ -51,6 +78,8 @@ export const ProntuarioModal = ({ isOpen, onClose, patientName, prontuarioId }: 
     evolucaoPaciente: existingProntuario?.evolucaoPaciente || "",
     anotacoesGerais: existingProntuario?.anotacoesGerais || ""
   });
+  
+  const [selectedAppointment, setSelectedAppointment] = useState<string>("");
 
   const [sessions, setSessions] = useState(existingProntuario?.sessoes || []);
   const [newSession, setNewSession] = useState({
@@ -59,6 +88,54 @@ export const ProntuarioModal = ({ isOpen, onClose, patientName, prontuarioId }: 
     evolucao: "",
     proximaConsulta: ""
   });
+  
+  // Atualizar dados quando paciente é selecionado
+  useEffect(() => {
+    if (selectedPatient) {
+      const patientData = patients.find(p => p.name === selectedPatient);
+      const existingPront = prontuarios.find(p => p.paciente.toLowerCase() === selectedPatient.toLowerCase());
+      
+      const userData = registeredUsers.find((u: any) => 
+        u.name === selectedPatient && u.type === "patient"
+      );
+      
+      setFormData({
+        paciente: selectedPatient,
+        psicologo: user?.name || "",
+        idade: existingPront?.idade || patientData?.age || userData?.age || "",
+        profissao: existingPront?.profissao || userData?.profession || "",
+        estadoCivil: existingPront?.estadoCivil || userData?.maritalStatus || "",
+        telefone: existingPront?.telefone || userData?.phone || "",
+        email: existingPront?.email || patientData?.email || userData?.email || "",
+        endereco: existingPront?.endereco || userData?.address || "",
+        cpf: existingPront?.cpf || "",
+        motivoConsulta: existingPront?.motivoConsulta || "",
+        historicoMedico: existingPront?.historicoMedico || "",
+        medicamentos: existingPront?.medicamentos || "",
+        observacoes: existingPront?.observacoes || "",
+        demandaInicial: existingPront?.demandaInicial || "",
+        objetivoTratamento: existingPront?.objetivoTratamento || "",
+        evolucaoPaciente: existingPront?.evolucaoPaciente || "",
+        anotacoesGerais: existingPront?.anotacoesGerais || ""
+      });
+      
+      setSessions(existingPront?.sessoes || []);
+    }
+  }, [selectedPatient, patients, prontuarios, user]);
+  
+  // Preencher sessão com dados da consulta selecionada
+  const handleSelectAppointment = (appointmentId: string) => {
+    setSelectedAppointment(appointmentId);
+    const appointment = patientCompletedAppointments.find(apt => apt.id.toString() === appointmentId);
+    if (appointment) {
+      setNewSession({
+        data: appointment.date,
+        observacoes: `Consulta ${appointment.type} realizada em ${appointment.date} às ${appointment.time}`,
+        evolucao: "",
+        proximaConsulta: ""
+      });
+    }
+  };
 
   const handleSave = () => {
     if (!formData.paciente.trim()) {
@@ -130,11 +207,42 @@ export const ProntuarioModal = ({ isOpen, onClose, patientName, prontuarioId }: 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            Prontuário - {patientName}
+            {existingProntuario ? `Prontuário - ${selectedPatient}` : "Novo Prontuário"}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Seleção de Paciente */}
+          {!prontuarioId && (
+            <Card className="bg-primary/5 border-primary/20">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Selecionar Paciente
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Select value={selectedPatient} onValueChange={setSelectedPatient}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Escolha um paciente com consultas confirmadas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {confirmedPatients.map(patient => (
+                      <SelectItem key={patient.id} value={patient.name}>
+                        {patient.name} - {patient.confirmedAppointments} consulta(s) confirmada(s)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedPatientData && (
+                  <div className="mt-3 text-sm text-muted-foreground">
+                    <p>📧 {selectedPatientData.email}</p>
+                    <p>📅 Primeira consulta: {new Date(selectedPatientData.firstAppointment).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
           {/* Dados Pessoais */}
           <Card>
             <CardHeader>
@@ -266,7 +374,30 @@ export const ProntuarioModal = ({ isOpen, onClose, patientName, prontuarioId }: 
 
               {/* Nova sessão */}
               <div className="border-t pt-4">
-                <h4 className="font-medium mb-3">Nova Sessão</h4>
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Nova Sessão
+                </h4>
+                
+                {/* Seleção de Consulta Realizada */}
+                {patientCompletedAppointments.length > 0 && (
+                  <div className="mb-4">
+                    <Label htmlFor="selectAppointment">Selecionar Consulta Realizada (Opcional)</Label>
+                    <Select value={selectedAppointment} onValueChange={handleSelectAppointment}>
+                      <SelectTrigger id="selectAppointment">
+                        <SelectValue placeholder="Escolha uma consulta para registrar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {patientCompletedAppointments.map(apt => (
+                          <SelectItem key={apt.id} value={apt.id.toString()}>
+                            {new Date(apt.date).toLocaleDateString('pt-BR')} às {apt.time} - {apt.type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="sessionDate">Data</Label>

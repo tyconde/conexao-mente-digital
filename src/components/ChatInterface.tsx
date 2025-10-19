@@ -92,7 +92,7 @@ export const ChatInterface = ({
       </div>
 
       {/* Mensagens */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/10">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/10 max-h-[calc(85vh-200px)]">
         {conversation?.messages && conversation.messages.length > 0 ? (
           <>
             {conversation.messages.map((message: Message) => {

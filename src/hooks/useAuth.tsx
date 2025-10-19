@@ -8,6 +8,9 @@ interface User {
   phone: string;
   address: string;
   type: "patient" | "professional";
+  age?: string;
+  profession?: string;
+  maritalStatus?: string;
   crp?: string;
   specialty?: string;
   password: string; // Para validação (em produção seria hash)
