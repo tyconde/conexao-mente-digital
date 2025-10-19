@@ -3,11 +3,20 @@ import { Button } from "@/components/ui/button";
 import { AuthModal } from "./AuthModal";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationBell } from "./NotificationBell";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useRouter } from "next/router";
 
 export const Navigation = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<"login" | "selectType">("login"); // 👈 novo estado
+  const [authMode, setAuthMode] = useState<"login" | "selectType">("login");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const { user, logout } = useAuth();
+  const router = useRouter(); // ✅ Next.js router
+
+  const handleEditProfile = () => {
+    router.push("/edit-profile"); // ✅ Navegação correta
+    setDropdownOpen(false);
+  };
 
   return (
     <header className="bg-white shadow-sm border-b">
@@ -31,17 +40,52 @@ export const Navigation = () => {
             </a>
           </nav>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 relative">
             {user ? (
               <>
                 <NotificationBell />
-                <span className="text-gray-700">Olá, {user.name}</span>
+
+                {/* Avatar do usuário com dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                    className="flex items-center focus:outline-none"
+                  >
+                    <Avatar className="w-10 h-10">
+                      {user.profileImage ? (
+                        <AvatarImage src={user.profileImage} alt={user.name} />
+                      ) : (
+                        <AvatarFallback>{user.name[0].toUpperCase()}</AvatarFallback>
+                      )}
+                    </Avatar>
+                  </button>
+
+                  {dropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg z-50">
+                      <button
+                        onClick={handleEditProfile}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                      >
+                        Editar Perfil
+                      </button>
+                      <button
+                        onClick={logout}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                      >
+                        Sair
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <span className="text-gray-700 ml-2 hidden md:inline">Olá, {user.name}</span>
+
                 <Button
                   onClick={() => {
                     if (user.type === "professional") {
-                      window.location.href = "/professional-dashboard";
+                      router.push("/professional-dashboard");
                     } else {
-                      window.location.href = "/patient-dashboard";
+                      router.push("/patient-dashboard");
                     }
                   }}
                   variant="outline"
@@ -49,15 +93,12 @@ export const Navigation = () => {
                 >
                   {user.type === "professional" ? "Painel de Gestão" : "Fazer Agendamento"}
                 </Button>
-                <Button onClick={logout} variant="ghost" size="sm">
-                  Sair
-                </Button>
               </>
             ) : (
               <>
                 <Button
                   onClick={() => {
-                    setAuthMode("login"); // 👈 modo login
+                    setAuthMode("login");
                     setShowAuthModal(true);
                   }}
                 >
@@ -65,7 +106,7 @@ export const Navigation = () => {
                 </Button>
                 <Button
                   onClick={() => {
-                    setAuthMode("selectType"); // 👈 modo cadastro
+                    setAuthMode("selectType");
                     setShowAuthModal(true);
                   }}
                   variant="outline"
@@ -81,7 +122,7 @@ export const Navigation = () => {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        mode={authMode} // 👈 usa o estado dinâmico agora
+        mode={authMode}
         userType="patient"
       />
     </header>

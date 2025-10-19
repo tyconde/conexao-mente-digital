@@ -14,6 +14,7 @@ import Contact from "./pages/Contact";
 import Appointments from "./pages/Appointments";
 import NotFound from "./pages/NotFound";
 
+
 const queryClient = new QueryClient();
 
 const App = () => (
