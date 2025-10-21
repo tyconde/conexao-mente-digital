@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Star, Calendar, MessageCircle, MapPin, Monitor } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useReviews } from "@/hooks/useReviews";
 import { useState } from "react";
 import { AuthModal } from "./AuthModal";
 import { MessagesModal } from "./MessagesModal";
@@ -28,8 +29,15 @@ export const ProfessionalCard = ({
   image 
 }: ProfessionalCardProps) => {
   const { user } = useAuth();
+  const { getProfessionalAverageRating, getProfessionalReviews } = useReviews();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showMessagesModal, setShowMessagesModal] = useState(false);
+
+  // Obter avaliações reais do profissional
+  const averageRating = getProfessionalAverageRating(id);
+  const reviews = getProfessionalReviews(id);
+  const reviewCount = reviews.length;
+  const displayRating = averageRating > 0 ? averageRating : rating;
 
   // Carregar configurações do profissional
   const professionalSettings = JSON.parse(
@@ -103,11 +111,24 @@ export const ProfessionalCard = ({
 
           <div className="flex items-center space-x-2">
             <div className="flex items-center">
-              <Star className="w-4 h-4 text-yellow-400 fill-current" />
-              <span className="text-sm font-medium text-foreground ml-1">{rating}</span>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  className={`w-4 h-4 ${
+                    star <= Math.round(displayRating)
+                      ? "text-yellow-400 fill-current"
+                      : "text-gray-300"
+                  }`}
+                />
+              ))}
+              <span className="text-sm font-medium text-foreground ml-2">
+                {displayRating.toFixed(1)}
+              </span>
             </div>
             <span className="text-sm text-muted-foreground">•</span>
-            <span className="text-sm text-muted-foreground">47 avaliações</span>
+            <span className="text-sm text-muted-foreground">
+              {reviewCount > 0 ? `${reviewCount} avaliações` : 'Sem avaliações'}
+            </span>
           </div>
 
           {/* Tipos de Atendimento */}

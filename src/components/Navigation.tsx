@@ -1,14 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "./AuthModal";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationBell } from "./NotificationBell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+<<<<<<< HEAD
 import { useRouter } from "next/router";
+=======
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { User, Heart, ChevronDown } from "lucide-react";
+>>>>>>> 09576e8 (fix: corrigido bug que exibia domingos como disponíveis no calendário de agendamento)
 
 export const Navigation = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "selectType">("login");
+<<<<<<< HEAD
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const { user, logout } = useAuth();
   const router = useRouter(); // ✅ Next.js router
@@ -17,33 +24,47 @@ export const Navigation = () => {
     router.push("/edit-profile"); // ✅ Navegação correta
     setDropdownOpen(false);
   };
+=======
+  const [profileImage, setProfileImage] = useState<string>("");
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
+      const userData = registeredUsers.find((u: any) => u.id === user.id);
+      setProfileImage(userData?.profileImage || "");
+    }
+  }, [user]);
+>>>>>>> 09576e8 (fix: corrigido bug que exibia domingos como disponíveis no calendário de agendamento)
 
   return (
     <header className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <a href="/" className="text-2xl font-bold text-primary">
+            <Link to="/" className="text-2xl font-bold text-primary">
               PsiConnect
-            </a>
+            </Link>
           </div>
 
           <nav className="hidden md:flex space-x-8">
-            <a href="/" className="text-gray-700 hover:text-primary transition-colors">
+            <Link to="/" className="text-gray-700 hover:text-primary transition-colors">
               Início
-            </a>
-            <a href="/about" className="text-gray-700 hover:text-primary transition-colors">
+            </Link>
+            <Link to="/about" className="text-gray-700 hover:text-primary transition-colors">
               Sobre
-            </a>
-            <a href="/contact" className="text-gray-700 hover:text-primary transition-colors">
+            </Link>
+            <Link to="/contact" className="text-gray-700 hover:text-primary transition-colors">
               Contato
-            </a>
+            </Link>
           </nav>
 
           <div className="flex items-center space-x-4 relative">
             {user ? (
               <>
                 <NotificationBell />
+<<<<<<< HEAD
 
                 {/* Avatar do usuário com dropdown */}
                 <div className="relative">
@@ -86,6 +107,43 @@ export const Navigation = () => {
                       router.push("/professional-dashboard");
                     } else {
                       router.push("/patient-dashboard");
+=======
+                <span className="text-gray-700">Olá, {user.name}</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <Avatar className="w-6 h-6">
+                        <AvatarImage src={profileImage} alt={user.name} />
+                        <AvatarFallback>
+                          <User className="w-4 h-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{user.name}</span>
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-gray-800 z-50">
+                    <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
+                      <User className="w-4 h-4 mr-2" />
+                      Meu Perfil
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/favorites")} className="cursor-pointer">
+                      <Heart className="w-4 h-4 mr-2 text-red-500" />
+                      Favoritos
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button
+                  onClick={() => {
+                    if (user.type === "professional") {
+                      navigate("/professional-dashboard");
+                    } else {
+                      navigate("/patient-dashboard");
+>>>>>>> 09576e8 (fix: corrigido bug que exibia domingos como disponíveis no calendário de agendamento)
                     }
                   }}
                   variant="outline"

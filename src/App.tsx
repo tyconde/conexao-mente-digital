@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import PatientDashboard from "./pages/PatientDashboard";
 import ProfessionalDashboard from "./pages/ProfessionalDashboard";
 import Profile from "./pages/Profile";
+import Favorites from "./pages/Favorites";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Appointments from "./pages/Appointments";
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/patient-dashboard" element={<PatientDashboard />} />
             <Route path="/professional-dashboard" element={<ProfessionalDashboard />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/favorites" element={<Favorites />} />
             <Route path="/appointments" element={<Appointments />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />

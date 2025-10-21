@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ import { DashboardFilters } from "@/components/DashboardFilters";
 import { PatientAppointments } from "@/components/PatientAppointments";
 import { MessagesModal } from "@/components/MessagesModal";
 import { MessagesButton } from "@/components/MessagesButton";
+import { PendingReviewsNotification } from "@/components/PendingReviewsNotification";
 
 const PatientDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -141,6 +143,11 @@ const PatientDashboard = () => {
               Início
             </Button>
           </div>
+        </div>
+
+        {/* Notificação de Avaliações Pendentes */}
+        <div className="mb-8">
+          <PendingReviewsNotification />
         </div>
 
         {/* Quick access to appointments */}

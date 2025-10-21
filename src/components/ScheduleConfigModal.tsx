@@ -111,6 +111,17 @@ export const ScheduleConfigModal = ({ isOpen, onClose }: ScheduleConfigModalProp
       return;
     }
 
+    // Verificar se pelo menos um dia está habilitado
+    const hasEnabledDay = Object.values(settings.schedule).some(day => day.enabled);
+    if (!hasEnabledDay) {
+      toast({
+        title: "Erro",
+        description: "Selecione pelo menos um dia da semana para atendimento.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     localStorage.setItem(`professional_settings_${user?.id}`, JSON.stringify(settings));
     
     toast({

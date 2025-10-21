@@ -9,6 +9,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { useToast } from "@/hooks/use-toast";
 import { MessagesModal } from "@/components/MessagesModal";
 import { Navigation } from "@/components/Navigation";
+import { PendingReviewsNotification } from "@/components/PendingReviewsNotification";
 import { useNavigate } from "react-router-dom";
 
 export default function Appointments() {
@@ -247,10 +248,15 @@ export default function Appointments() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Meus Agendamentos</h1>
             <p className="text-gray-600">Gerencie suas consultas e histórico</p>
           </div>
-          <Button variant="outline" onClick={() => navigate(-1)}>
+          <Button variant="outline" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/"))}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar
           </Button>
+        </div>
+
+        {/* Notificação de Avaliações Pendentes */}
+        <div className="mb-6">
+          <PendingReviewsNotification />
         </div>
 
         <Tabs defaultValue="future" className="space-y-6">

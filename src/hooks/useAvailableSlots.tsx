@@ -36,6 +36,9 @@ export const useAvailableSlots = (professionalId: number) => {
       const savedSettings = localStorage.getItem(`professional_settings_${professionalId}`);
       if (savedSettings) {
         setProfessionalSettings(JSON.parse(savedSettings));
+      } else {
+        // Sem configurações salvas, deixar null para indicar que o profissional não configurou
+        setProfessionalSettings(null);
       }
     }
   }, [professionalId]);
@@ -43,7 +46,9 @@ export const useAvailableSlots = (professionalId: number) => {
   const isDateAvailable = (dateStr: string): boolean => {
     if (!professionalSettings) return false;
     
-    const date = new Date(dateStr);
+    // Usar parsing manual para evitar problemas de timezone UTC
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
     const dayOfWeek = date.getDay();
     const dayKey = weekDaysMap[dayOfWeek];
     
@@ -53,7 +58,9 @@ export const useAvailableSlots = (professionalId: number) => {
   const isTimeAvailable = (dateStr: string, timeStr: string): boolean => {
     if (!professionalSettings || !isDateAvailable(dateStr)) return false;
     
-    const date = new Date(dateStr);
+    // Usar parsing manual para evitar problemas de timezone UTC
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
     const dayOfWeek = date.getDay();
     const dayKey = weekDaysMap[dayOfWeek];
     const daySchedule = professionalSettings.schedule[dayKey];

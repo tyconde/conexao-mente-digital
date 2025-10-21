@@ -20,12 +20,14 @@ import { Navigation } from "@/components/Navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfessionalAppointments } from "@/hooks/useProfessionalAppointments";
 import { useProntuarios } from "@/hooks/useProntuarios";
+import { useReviews } from "@/hooks/useReviews";
 import { NewAppointmentModal } from "@/components/NewAppointmentModal";
 import { PriceConfigModal } from "@/components/PriceConfigModal";
 import { ProntuarioModal } from "@/components/ProntuarioModal";
 import { ScheduleConfigModal } from "@/components/ScheduleConfigModal";
 import { PatientsSection } from "@/components/PatientsSection";
 import { ReportsSection } from "@/components/ReportsSection";
+import { ProfessionalReviewsList } from "@/components/ProfessionalReviewsList";
 import { useMessages } from "@/hooks/useMessages";
 import { MessagesModal } from "@/components/MessagesModal";
 import { CreateAppointmentModal } from "../components/CreateAppointmentModal";
@@ -571,6 +573,9 @@ const ProfessionalDashboard = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Avaliações Recebidas */}
+            <ProfessionalReviewsList professionalId={user.id} />
           </div>
         )}
 

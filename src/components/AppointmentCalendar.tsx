@@ -34,7 +34,7 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
 
   // Verificar se paciente já teve consulta com este profissional
   useEffect(() => {
-    if (user && psychologistId) {
+    if (user && psychologistId && isOpen) {
       const savedAppointments = localStorage.getItem("appointments");
       if (savedAppointments) {
         const allAppointments = JSON.parse(savedAppointments);
@@ -44,22 +44,26 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
           apt.status === "confirmada"
         );
         setHasHadAppointment(hadAppointment);
-        if (hadAppointment && appointmentType === "Primeira consulta") {
+        // Definir o tipo de consulta baseado no histórico
+        if (hadAppointment) {
           setAppointmentType("Consulta de retorno");
+        } else {
+          setAppointmentType("Primeira consulta");
         }
       }
     }
-  }, [user, psychologistId]);
+  }, [user, psychologistId, isOpen]); // Removido appointmentType das dependências
 
   // Resetar selectedTime quando mudar de data
   useEffect(() => {
     setSelectedTime("");
   }, [selectedDate]);
 
-  const generateTimeSlots = () => {
-    if (!selectedDate || !professionalSettings) return [];
+  const generateTimeSlots = (date?: Date) => {
+    const targetDate = date || selectedDate;
+    if (!targetDate || !professionalSettings) return [];
 
-    const dayOfWeek = selectedDate.getDay();
+    const dayOfWeek = targetDate.getDay();
     const weekDaysMap: { [key: number]: string } = {
       0: "sunday", 1: "monday", 2: "tuesday", 3: "wednesday",
       4: "thursday", 5: "friday", 6: "saturday"
@@ -74,7 +78,7 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
     const [endHour, endMinute] = daySchedule.end.split(":").map(Number);
 
     const now = new Date();
-    const isToday = selectedDate.toDateString() === now.toDateString();
+    const isToday = targetDate.toDateString() === now.toDateString();
 
     for (let hour = startHour; hour < endHour; hour++) {
       const time00 = `${hour.toString().padStart(2, "0")}:00`;
@@ -218,11 +222,23 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (date < today) return true;
-    return !isDateAvailable(date.toISOString().split("T")[0]);
+    
+    // Formatar data sem problemas de timezone
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    return !isDateAvailable(dateStr);
   };
 
   const getBookedSlotsForDate = (date: Date) => {
-    const dateStr = date.toISOString().split("T")[0];
+    // Formatar data sem problemas de timezone
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
     const savedAppointments = localStorage.getItem("appointments");
     if (!savedAppointments) return [];
     
@@ -236,8 +252,25 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
       .map((apt: any) => apt.time);
   };
 
+  const hasAvailableSlots = (date: Date) => {
+    // Gerar todos os slots possíveis para este dia
+    const allSlots = generateTimeSlots(date);
+    if (allSlots.length === 0) return false;
+    
+    // Verificar quais estão ocupados
+    const bookedSlots = getBookedSlotsForDate(date);
+    
+    // Retorna true se houver pelo menos um slot disponível
+    return allSlots.some(slot => !bookedSlots.includes(slot));
+  };
+
   const isDateFullyBooked = (date: Date) => {
-    const dateStr = date.toISOString().split("T")[0];
+    // Formatar data sem problemas de timezone
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
     if (!isDateAvailable(dateStr)) return false;
     
     const dayOfWeek = date.getDay();
@@ -250,12 +283,8 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
     const daySchedule = getDaySchedule(dayKey);
     if (!daySchedule || !daySchedule.enabled) return false;
     
-    const [startHour] = daySchedule.start.split(":").map(Number);
-    const [endHour] = daySchedule.end.split(":").map(Number);
-    const totalSlots = (endHour - startHour) * 2;
-    
-    const bookedSlots = getBookedSlotsForDate(date);
-    return bookedSlots.length >= totalSlots;
+    // Verificar se há slots disponíveis (considerando horários já passados hoje)
+    return !hasAvailableSlots(date);
   };
 
   const timeSlots = generateTimeSlots();
@@ -264,11 +293,21 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
   if (!professionalSettings) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="w-full max-w-xs mx-auto">
+        <DialogContent className="w-full max-w-md mx-auto">
           <DialogHeader>
-            <DialogTitle>Carregando...</DialogTitle>
+            <DialogTitle>Atenção</DialogTitle>
           </DialogHeader>
-          <div className="p-8 text-center">Carregando horários disponíveis...</div>
+          <div className="p-6 space-y-4">
+            <p className="text-center text-gray-600">
+              Este profissional ainda não configurou seus horários de atendimento.
+            </p>
+            <p className="text-sm text-center text-gray-500">
+              Por favor, entre em contato diretamente com {psychologistName} para agendar uma consulta.
+            </p>
+            <Button onClick={onClose} className="w-full">
+              Entendido
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     );
@@ -294,7 +333,14 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
                   available: (date) => {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
-                    return date >= today && isDateAvailable(date.toISOString().split("T")[0]) && !isDateFullyBooked(date);
+                    
+                    // Formatar data sem problemas de timezone
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const dateStr = `${year}-${month}-${day}`;
+                    
+                    return date >= today && isDateAvailable(dateStr) && hasAvailableSlots(date);
                   },
                   fullyBooked: (date) => {
                     const today = new Date();

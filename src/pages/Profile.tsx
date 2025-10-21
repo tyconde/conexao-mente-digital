@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { DetailedAddressForm } from "@/components/DetailedAddressForm";
 
 const Profile = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -55,6 +57,16 @@ const Profile = () => {
         profileImage: userData?.profileImage || ""
       });
     }
+
+    // Scroll para seção de favoritos se houver hash na URL
+    if (window.location.hash === "#favorites") {
+      setTimeout(() => {
+        const favoritesSection = document.getElementById("favorites");
+        if (favoritesSection) {
+          favoritesSection.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
+    }
   }, [user]);
 
   if (!user) {
@@ -68,7 +80,7 @@ const Profile = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => window.location.href = "/"} className="w-full">
+            <Button onClick={() => navigate("/")} className="w-full">
               Voltar ao Início
             </Button>
           </CardContent>
@@ -131,6 +143,22 @@ const Profile = () => {
       ...prev,
       profileImage: imageData
     }));
+    
+    // Salvar imagem diretamente no localStorage
+    const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
+    const userIndex = registeredUsers.findIndex((u: any) => u.id === user.id);
+    
+    if (userIndex !== -1) {
+      registeredUsers[userIndex].profileImage = imageData;
+      localStorage.setItem("registeredUsers", JSON.stringify(registeredUsers));
+      
+      // Atualizar usuário atual
+      const updatedUser = { ...registeredUsers[userIndex] };
+      delete updatedUser.password;
+      localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+      
+      alert("Foto de perfil salva com sucesso!");
+    }
   };
 
   const handlePasswordChange = () => {
@@ -177,7 +205,7 @@ const Profile = () => {
           <div>
             <Button 
               variant="outline" 
-              onClick={() => window.history.back()}
+              onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/"))}
               className="mb-4"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -188,7 +216,7 @@ const Profile = () => {
           </div>
           <Button 
             variant="outline" 
-            onClick={() => window.location.href = "/"}
+            onClick={() => navigate("/")}
             className="flex items-center"
           >
             <Home className="w-4 h-4 mr-2" />
@@ -205,7 +233,9 @@ const Profile = () => {
               onImageSave={handleImageSave}
             />
 
-            <FavoritesList />
+            <div id="favorites">
+              <FavoritesList />
+            </div>
           </div>
 
           {/* Informações Pessoais */}
