@@ -5,26 +5,12 @@ import { AuthModal } from "./AuthModal";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationBell } from "./NotificationBell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-<<<<<<< HEAD
-import { useRouter } from "next/router";
-=======
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { User, Heart, ChevronDown } from "lucide-react";
->>>>>>> 09576e8 (fix: corrigido bug que exibia domingos como disponíveis no calendário de agendamento)
 
 export const Navigation = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "selectType">("login");
-<<<<<<< HEAD
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const { user, logout } = useAuth();
-  const router = useRouter(); // ✅ Next.js router
-
-  const handleEditProfile = () => {
-    router.push("/edit-profile"); // ✅ Navegação correta
-    setDropdownOpen(false);
-  };
-=======
   const [profileImage, setProfileImage] = useState<string>("");
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -36,7 +22,6 @@ export const Navigation = () => {
       setProfileImage(userData?.profileImage || "");
     }
   }, [user]);
->>>>>>> 09576e8 (fix: corrigido bug que exibia domingos como disponíveis no calendário de agendamento)
 
   return (
     <header className="bg-white shadow-sm border-b">
@@ -64,50 +49,6 @@ export const Navigation = () => {
             {user ? (
               <>
                 <NotificationBell />
-<<<<<<< HEAD
-
-                {/* Avatar do usuário com dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setDropdownOpen(!dropdownOpen)}
-                    className="flex items-center focus:outline-none"
-                  >
-                    <Avatar className="w-10 h-10">
-                      {user.profileImage ? (
-                        <AvatarImage src={user.profileImage} alt={user.name} />
-                      ) : (
-                        <AvatarFallback>{user.name[0].toUpperCase()}</AvatarFallback>
-                      )}
-                    </Avatar>
-                  </button>
-
-                  {dropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg z-50">
-                      <button
-                        onClick={handleEditProfile}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-100"
-                      >
-                        Editar Perfil
-                      </button>
-                      <button
-                        onClick={logout}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-100"
-                      >
-                        Sair
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <span className="text-gray-700 ml-2 hidden md:inline">Olá, {user.name}</span>
-
-                <Button
-                  onClick={() => {
-                    if (user.type === "professional") {
-                      router.push("/professional-dashboard");
-                    } else {
-                      router.push("/patient-dashboard");
-=======
                 <span className="text-gray-700">Olá, {user.name}</span>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -143,7 +84,6 @@ export const Navigation = () => {
                       navigate("/professional-dashboard");
                     } else {
                       navigate("/patient-dashboard");
->>>>>>> 09576e8 (fix: corrigido bug que exibia domingos como disponíveis no calendário de agendamento)
                     }
                   }}
                   variant="outline"
