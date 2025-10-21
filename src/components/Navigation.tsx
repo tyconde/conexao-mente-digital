@@ -45,7 +45,7 @@ export const Navigation = () => {
             </Link>
           </nav>
 
-          <div className="flex items-center space-x-4 relative">
+          <div className="flex items-center space-x-4">
             {user ? (
               <>
                 <NotificationBell />
@@ -91,12 +91,15 @@ export const Navigation = () => {
                 >
                   {user.type === "professional" ? "Painel de Gestão" : "Fazer Agendamento"}
                 </Button>
+                <Button onClick={logout} variant="ghost" size="sm">
+                  Sair
+                </Button>
               </>
             ) : (
               <>
                 <Button
                   onClick={() => {
-                    setAuthMode("login");
+                    setAuthMode("login"); // 👈 modo login
                     setShowAuthModal(true);
                   }}
                 >
@@ -104,7 +107,7 @@ export const Navigation = () => {
                 </Button>
                 <Button
                   onClick={() => {
-                    setAuthMode("selectType");
+                    setAuthMode("selectType"); // 👈 modo cadastro
                     setShowAuthModal(true);
                   }}
                   variant="outline"
@@ -120,7 +123,7 @@ export const Navigation = () => {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        mode={authMode}
+        mode={authMode} // 👈 usa o estado dinâmico agora
         userType="patient"
       />
     </header>

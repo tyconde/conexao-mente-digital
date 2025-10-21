@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext, useContext } from "react";
 
 interface User {
@@ -13,7 +14,6 @@ interface User {
   crp?: string;
   specialty?: string;
   password: string; // Para validação (em produção seria hash)
-  profileImage?: string; // 🔑 adicionamos aqui
 }
 
 interface AuthContextType {
@@ -23,7 +23,6 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   clearAllUsers: () => void;
-  updateUser: (data: Partial<User>) => void; // 🔑 adicionamos aqui
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,21 +39,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const register = (userData: Omit<User, 'id'>): boolean => {
     try {
+      // Verificar se o email já existe
       const existingUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
       const emailExists = existingUsers.some((u: User) => u.email === userData.email);
-
+      
       if (emailExists) {
         alert("Este email já está cadastrado!");
         return false;
       }
 
-      const newUser: User = { ...userData, id: Date.now() };
+      // Criar novo usuário
+      const newUser: User = {
+        ...userData,
+        id: Date.now()
+      };
 
+      // Salvar na lista de usuários registrados
       const updatedUsers = [...existingUsers, newUser];
       localStorage.setItem("registeredUsers", JSON.stringify(updatedUsers));
 
+      // Fazer login automático
       const userForLogin = { ...newUser };
-      delete userForLogin.password;
+      delete userForLogin.password; // Não manter senha no estado do usuário logado
       setUser(userForLogin as User);
       localStorage.setItem("currentUser", JSON.stringify(userForLogin));
 
@@ -68,13 +74,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = (email: string, password: string): boolean => {
     try {
       const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
-      const foundUser = registeredUsers.find((u: User) =>
+      const foundUser = registeredUsers.find((u: User) => 
         u.email === email && u.password === password
       );
 
       if (foundUser) {
         const userForLogin = { ...foundUser };
-        delete userForLogin.password;
+        delete userForLogin.password; // Não manter senha no estado
         setUser(userForLogin as User);
         localStorage.setItem("currentUser", JSON.stringify(userForLogin));
         return true;
@@ -91,6 +97,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem("currentUser");
+    // Não removemos mais os agendamentos no logout para preservar dados entre contas
   };
 
   const clearAllUsers = () => {
@@ -101,21 +108,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     alert("Todos os dados foram limpos!");
   };
 
-  // 🔑 Novo método para atualizar usuário
-  const updateUser = (data: Partial<User>) => {
-    setUser(prev => {
-      if (!prev) return null;
-      const updated = { ...prev, ...data };
-      localStorage.setItem("currentUser", JSON.stringify(updated));
-      return updated;
-    });
-
-    // Também atualiza na lista de usuários registrados
-    const registeredUsers: User[] = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
-    const updatedUsers = registeredUsers.map(u => u.id === user?.id ? { ...u, ...data } : u);
-    localStorage.setItem("registeredUsers", JSON.stringify(updatedUsers));
-  };
-
   return (
     <AuthContext.Provider value={{
       user,
@@ -123,8 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       register,
       logout,
       clearAllUsers,
-      isAuthenticated: !!user,
-      updateUser // 🔑 adicionamos aqui
+      isAuthenticated: !!user
     }}>
       {children}
     </AuthContext.Provider>
