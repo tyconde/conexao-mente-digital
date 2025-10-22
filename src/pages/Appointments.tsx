@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, MapPin, Monitor, X, MessageCircle, ArrowLeft } from "lucide-react";
+import { Calendar, Clock, MapPin, Monitor, X, MessageCircle, ArrowLeft, CheckCircle, Star } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useToast } from "@/hooks/use-toast";
@@ -11,14 +11,19 @@ import { MessagesModal } from "@/components/MessagesModal";
 import { Navigation } from "@/components/Navigation";
 import { PendingReviewsNotification } from "@/components/PendingReviewsNotification";
 import { useNavigate } from "react-router-dom";
+import { ReviewModal } from "@/components/ReviewModal";
+import { useReviews } from "@/hooks/useReviews";
 
 export default function Appointments() {
   const { user } = useAuth();
   const { addNotification } = useNotifications();
   const { toast } = useToast();
+  const { hasReviewedAppointment } = useReviews();
   const [showMessages, setShowMessages] = useState(false);
   const [selectedProfessional, setSelectedProfessional] = useState<{id: string, name: string} | null>(null);
   const [userAppointments, setUserAppointments] = useState<any[]>([]);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -79,6 +84,33 @@ export default function Appointments() {
     }
   };
 
+  const handleCompleteAppointment = (appointment: any) => {
+    if (confirm("Deseja finalizar esta consulta?")) {
+      const saved = localStorage.getItem("appointments");
+      const all = saved ? JSON.parse(saved) : [];
+      const index = all.findIndex((a: any) => Number(a.id) === Number(appointment.id));
+      if (index !== -1) {
+        const updated = { ...all[index], status: "finalizada" };
+        all[index] = updated;
+        localStorage.setItem("appointments", JSON.stringify(all));
+
+        // Atualiza lista local
+        setUserAppointments(prev => prev.map(appt => appt.id === appointment.id ? updated : appt));
+        
+        // Abre modal de avaliação
+        setSelectedAppointment(updated);
+        setShowReviewModal(true);
+        
+        toast({ title: "Consulta finalizada", description: "Avalie sua experiência!" });
+      }
+    }
+  };
+
+  const handleOpenReview = (appointment: any) => {
+    setSelectedAppointment(appointment);
+    setShowReviewModal(true);
+  };
+
   const handleSendMessage = (professionalId: number, professionalName: string) => {
     setSelectedProfessional({
       id: professionalId.toString(),
@@ -107,6 +139,12 @@ export default function Appointments() {
             Cancelada
           </Badge>
         );
+      case "finalizada":
+        return (
+          <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+            Finalizada
+          </Badge>
+        );
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -117,6 +155,8 @@ export default function Appointments() {
       return "Consulta confirmada pelo profissional";
     } else if (appointment.status === "cancelada") {
       return appointment.notes || "Consulta cancelada";
+    } else if (appointment.status === "finalizada") {
+      return "Consulta finalizada";
     }
     return "Solicitação de agendamento - aguardando confirmação";
   };
@@ -143,18 +183,18 @@ export default function Appointments() {
     const [year, month, day] = apt.date.split('-').map(Number);
     const aptDate = new Date(year, month - 1, day);
     aptDate.setHours(0, 0, 0, 0);
-    return aptDate >= today && apt.status !== "cancelada";
+    return aptDate >= today && apt.status !== "cancelada" && apt.status !== "finalizada";
   }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const pastAppointments = userAppointments.filter(apt => {
     const [year, month, day] = apt.date.split('-').map(Number);
     const aptDate = new Date(year, month - 1, day);
     aptDate.setHours(0, 0, 0, 0);
-    return aptDate < today || apt.status === "cancelada";
+    return aptDate < today || apt.status === "cancelada" || apt.status === "finalizada";
   }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const renderAppointmentCard = (appointment: any, showCancel: boolean) => (
-    <Card key={appointment.id}>
+    <Card key={appointment.id} data-appointment-id={appointment.id}>
       <CardContent className="p-6">
         <div className="flex justify-between items-start mb-4">
           <div className="space-y-2">
@@ -203,7 +243,31 @@ export default function Appointments() {
               Mensagem
             </Button>
             
-            {showCancel && appointment.status !== "cancelada" && (
+            {appointment.status === "confirmada" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleCompleteAppointment(appointment)}
+                className="text-green-600 hover:text-green-700"
+              >
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Finalizar
+              </Button>
+            )}
+
+            {appointment.status === "finalizada" && !hasReviewedAppointment(appointment.id, user?.id || 0) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleOpenReview(appointment)}
+                className="text-yellow-600 hover:text-yellow-700"
+              >
+                <Star className="w-4 h-4 mr-1" />
+                Avaliar
+              </Button>
+            )}
+            
+            {showCancel && appointment.status !== "cancelada" && appointment.status !== "finalizada" && (
               <Button
                 variant="outline"
                 size="sm"
@@ -305,6 +369,19 @@ export default function Appointments() {
         userId={user?.id?.toString() || ""}
         userType="patient"
       />
+
+      {selectedAppointment && (
+        <ReviewModal
+          isOpen={showReviewModal}
+          onClose={() => {
+            setShowReviewModal(false);
+            setSelectedAppointment(null);
+          }}
+          appointment={selectedAppointment}
+          patientId={user?.id || 0}
+          patientName={user?.name || ""}
+        />
+      )}
     </div>
   );
 }

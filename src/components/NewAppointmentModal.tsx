@@ -60,6 +60,16 @@ export const NewAppointmentModal = ({
       return;
     }
 
+    // Validar se a data não é no passado
+    const selectedDate = new Date(formData.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+      alert("Não é possível criar agendamentos para datas passadas!");
+      return;
+    }
+
     onCreateAppointment({
       ...formData,
       professionalId: professionalId || user?.id || 0,
@@ -120,6 +130,7 @@ export const NewAppointmentModal = ({
               type="date"
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              min={new Date().toISOString().split('T')[0]}
               required
             />
           </div>

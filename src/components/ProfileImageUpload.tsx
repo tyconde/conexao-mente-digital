@@ -93,10 +93,22 @@ export const ProfileImageUpload = ({ currentImage, userName, onImageSave }: Prof
           />
 
           {!isEditing ? (
-            <Button variant="outline" className="w-full" onClick={handleImageClick}>
-              <Camera className="w-4 h-4 mr-2" />
-              {currentImage ? 'Alterar Foto' : 'Adicionar Foto'}
-            </Button>
+            <div className="space-y-2">
+              <Button variant="outline" className="w-full" onClick={handleImageClick}>
+                <Camera className="w-4 h-4 mr-2" />
+                {currentImage ? 'Alterar Foto' : 'Adicionar Foto'}
+              </Button>
+              {currentImage && (
+                <Button 
+                  variant="destructive" 
+                  className="w-full" 
+                  onClick={() => onImageSave("")}
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Remover Foto
+                </Button>
+              )}
+            </div>
           ) : (
             <div className="space-y-2">
               <p className="text-sm text-blue-600 font-medium">

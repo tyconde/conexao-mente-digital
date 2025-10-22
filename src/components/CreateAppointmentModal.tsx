@@ -31,6 +31,16 @@ export function CreateAppointmentModal({ isOpen, onClose, onCreate }: CreateAppo
   const [notes, setNotes] = useState("");
 
   const handleCreate = () => {
+    // Validar se a data não é no passado
+    const selectedDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+      alert("Não é possível criar agendamentos para datas passadas!");
+      return;
+    }
+    
     const newAppointment: AppointmentType = {
       id: Date.now(),
       patientName,
@@ -93,6 +103,7 @@ export function CreateAppointmentModal({ isOpen, onClose, onCreate }: CreateAppo
                 className="w-full border p-2 rounded"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
               />
               <input
                 type="time"

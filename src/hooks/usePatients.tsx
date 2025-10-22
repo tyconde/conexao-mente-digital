@@ -52,7 +52,7 @@ export const usePatients = () => {
       // Atualizar estatísticas
       patient.totalAppointments++;
       
-      if (appointment.status === "confirmada") {
+      if (appointment.status === "confirmada" || appointment.status === "finalizada") {
         patient.confirmedAppointments++;
       } else if (appointment.status === "pendente") {
         patient.pendingAppointments++;

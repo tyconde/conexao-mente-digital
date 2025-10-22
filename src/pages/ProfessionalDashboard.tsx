@@ -32,6 +32,7 @@ import { useMessages } from "@/hooks/useMessages";
 import { MessagesModal } from "@/components/MessagesModal";
 import { CreateAppointmentModal } from "../components/CreateAppointmentModal";
 import { MessagesButton } from "@/components/MessagesButton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 const ProfessionalDashboard = () => {
@@ -44,7 +45,7 @@ const ProfessionalDashboard = () => {
   const [selectedPatientName, setSelectedPatientName] = useState("");
   const { user } = useAuth();
   const { appointments, addAppointment, updateAppointment, setAppointments } = useProfessionalAppointments();
-  const { prontuarios, addProntuario, updateProntuario, deleteProntuario } = useProntuarios();
+  const { prontuarios, addProntuario, updateProntuario, deleteProntuario } = useProntuarios(Number(user?.id));
   const { conversations, sendMessage, markAsRead } = useMessages(user?.id?.toString() || "", "professional");
   const [isMessagesOpen, setIsMessagesOpen] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -181,7 +182,11 @@ const ProfessionalDashboard = () => {
   const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
   const upcomingAppointments = appointments
-    .filter(apt => apt.date === today || apt.date === tomorrowStr)
+    .filter(apt => 
+      (apt.date === today || apt.date >= today) && 
+      apt.status !== "cancelada" && 
+      apt.status !== "finalizada"
+    )
     .sort((a, b) => {
       if (a.date !== b.date) return a.date.localeCompare(b.date);
       return a.time.localeCompare(b.time);
@@ -482,13 +487,6 @@ const ProfessionalDashboard = () => {
                       <div className="text-center py-8 text-gray-500">
                         <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                         <p>Nenhum agendamento próximo</p>
-                        <Button 
-                          onClick={() => setShowNewAppointmentModal(true)}
-                          className="mt-4"
-                          variant="outline"
-                        >
-                          Criar primeiro agendamento
-                        </Button>
                       </div>
                     )}
                   </div>
@@ -595,7 +593,7 @@ const ProfessionalDashboard = () => {
               </Button>
             </div>
 
-            {/* Seção de solicitações pendentes */}
+            {/* Seção de solicitações pendentes em destaque */}
             {pendingRequests.length > 0 && (
               <Card className="border-yellow-200 bg-yellow-50">
                 <CardHeader>
@@ -604,7 +602,7 @@ const ProfessionalDashboard = () => {
                 <CardContent>
                   <div className="space-y-4">
                     {pendingRequests.map((request) => (
-                      <div key={request.id} className="flex justify-between items-center bg-white p-4 rounded shadow">
+                      <div key={request.id} data-appointment-id={request.id} className="flex justify-between items-center bg-white p-4 rounded shadow">
                         <div>
                           <p className="font-medium text-gray-900">{request.patientName}</p>
                           <p className="text-sm text-gray-600">{request.type}</p>
@@ -648,42 +646,79 @@ const ProfessionalDashboard = () => {
               </Card>
             )}
 
-            {/* Lista de todos os agendamentos */}
+            {/* Tabs para filtrar por status */}
             <Card>
               <CardHeader>
-                <CardTitle>Todos os Agendamentos</CardTitle>
+                <CardTitle>Agendamentos</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {appointments.length > 0 ? (
-                  appointments
-                    .sort((a, b) => {
-                      if (a.date !== b.date) return a.date.localeCompare(b.date);
-                      return a.time.localeCompare(b.time);
-                    })
-                    .map((appointment) => (
-                      <div key={appointment.id} className="border rounded-lg p-4 bg-white shadow-sm">
-                        <p><strong>Paciente:</strong> {appointment.patientName}</p>
-                        <p><strong>Data:</strong> {appointment.date}</p>
-                        <p><strong>Hora:</strong> {appointment.time}</p>
-                        <p><strong>Tipo:</strong> {appointment.type}</p>
-                        <p><strong>Email:</strong> {appointment.patientEmail}</p>
-                        <p><strong>Observações:</strong> {appointment.notes || "Nenhuma"}</p>
-                        <Badge 
-                          className={`mt-2 ${
-                            appointment.status === "confirmada" 
-                              ? "bg-green-100 text-green-800" 
-                              : appointment.status === "pendente"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {appointment.status}
-                        </Badge>
-                      </div>
-                    ))
-                ) : (
-                  <p className="text-gray-500">Nenhum agendamento encontrado.</p>
-                )}
+              <CardContent>
+                <Tabs defaultValue="all" className="w-full">
+                  <TabsList className="grid w-full grid-cols-5">
+                    <TabsTrigger value="all">
+                      Todos ({appointments.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="pendente">
+                      Pendentes ({appointments.filter(a => a.status === "pendente").length})
+                    </TabsTrigger>
+                    <TabsTrigger value="confirmada">
+                      Confirmados ({appointments.filter(a => a.status === "confirmada").length})
+                    </TabsTrigger>
+                    <TabsTrigger value="finalizada">
+                      Finalizados ({appointments.filter(a => a.status === "finalizada").length})
+                    </TabsTrigger>
+                    <TabsTrigger value="cancelada">
+                      Cancelados ({appointments.filter(a => a.status === "cancelada").length})
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {["all", "pendente", "confirmada", "finalizada", "cancelada"].map((status) => (
+                    <TabsContent key={status} value={status} className="space-y-4 mt-4">
+                      {(() => {
+                        const filtered = status === "all" 
+                          ? appointments 
+                          : appointments.filter(a => a.status === status);
+                        
+                        const sorted = filtered.sort((a, b) => {
+                          if (a.date !== b.date) return a.date.localeCompare(b.date);
+                          return a.time.localeCompare(b.time);
+                        });
+
+                        return sorted.length > 0 ? (
+                          sorted.map((appointment) => (
+                            <div key={appointment.id} data-appointment-id={appointment.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                              <p><strong>Paciente:</strong> {appointment.patientName}</p>
+                              <p><strong>Data:</strong> {appointment.date}</p>
+                              <p><strong>Hora:</strong> {appointment.time}</p>
+                              <p><strong>Tipo:</strong> {appointment.type}</p>
+                              <p><strong>Email:</strong> {appointment.patientEmail}</p>
+                              <p><strong>Observações:</strong> {appointment.notes || "Nenhuma"}</p>
+                              <Badge 
+                                className={`mt-2 ${
+                                  appointment.status === "confirmada" 
+                                    ? "bg-green-100 text-green-800" 
+                                    : appointment.status === "pendente"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : appointment.status === "finalizada"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {appointment.status}
+                              </Badge>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-gray-500 text-center py-8">
+                            {status === "all" 
+                              ? "Nenhum agendamento encontrado." 
+                              : `Nenhum agendamento ${status === "pendente" ? "pendente" : status === "confirmada" ? "confirmado" : status === "finalizada" ? "finalizado" : "cancelado"}.`
+                            }
+                          </p>
+                        );
+                      })()}
+                    </TabsContent>
+                  ))}
+                </Tabs>
               </CardContent>
             </Card>
 
@@ -758,13 +793,6 @@ const ProfessionalDashboard = () => {
                       <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                       <p className="text-lg font-medium mb-2">Nenhum prontuário encontrado</p>
                       <p className="mb-4">Comece criando seu primeiro prontuário</p>
-                      <Button 
-                        onClick={handleCreateNewProntuario}
-                        className="flex items-center gap-2"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Criar Prontuário
-                      </Button>
                     </div>
                   )}
                 </div>

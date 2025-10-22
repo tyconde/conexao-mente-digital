@@ -238,10 +238,15 @@ const PatientDashboard = () => {
                           <div className="flex items-center gap-4">
                             <div className="flex items-center">
                               <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                              <span className="text-sm font-medium text-gray-700 ml-1">
-                                {psychologist.rating}
+                               <span className="text-sm font-medium text-gray-700 ml-1">
+                                {psychologist.rating.toFixed(1)}
                               </span>
-                              <span className="text-sm text-gray-500 ml-1">(Novo)</span>
+                              <span className="text-sm text-gray-500 ml-1">
+                                {psychologist.reviewCount && psychologist.reviewCount > 0 
+                                  ? `(${psychologist.reviewCount} avaliação${psychologist.reviewCount > 1 ? 'ões' : ''})`
+                                  : "(Novo)"
+                                }
+                              </span>
                             </div>
                           </div>
 

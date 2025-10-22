@@ -49,7 +49,6 @@ export const Navigation = () => {
             {user ? (
               <>
                 <NotificationBell />
-                <span className="text-gray-700">Olá, {user.name}</span>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button

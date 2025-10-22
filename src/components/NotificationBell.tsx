@@ -6,14 +6,59 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useProfessionalAppointments } from "@/hooks/useProfessionalAppointments";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 export const NotificationBell = () => {
   const { notifications, unreadCount, markAsRead, clearAllNotifications } = useNotifications();
   const { updateAppointment } = useProfessionalAppointments();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleNotificationClick = (notificationId: number) => {
-    markAsRead(notificationId);
+  const handleNotificationClick = (notification: any) => {
+    markAsRead(notification.id);
+    
+    // Redirecionar baseado no tipo de notificação
+    switch (notification.type) {
+      case "appointment_request":
+        // Profissional recebe solicitação - ir para dashboard de agendamentos
+        if (user?.type === "professional") {
+          navigate("/professional-dashboard");
+          setTimeout(() => {
+            const element = document.querySelector(`[data-appointment-id="${notification.appointmentId}"]`);
+            element?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }, 100);
+        }
+        break;
+      
+      case "appointment_approved":
+      case "appointment_rejected":
+        // Paciente recebe confirmação/rejeição - ir para página de agendamentos
+        if (user?.type === "patient") {
+          navigate("/appointments");
+          setTimeout(() => {
+            const element = document.querySelector(`[data-appointment-id="${notification.appointmentId}"]`);
+            element?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }, 100);
+        }
+        break;
+      
+      case "message":
+        // Qualquer mensagem - ir para a página apropriada
+        if (user?.type === "professional") {
+          navigate("/professional-dashboard");
+        } else {
+          navigate("/appointments");
+        }
+        break;
+      
+      default:
+        // Tipo desconhecido - não redirecionar
+        break;
+    }
+    
+    setIsOpen(false);
   };
 
   const handleConfirm = (appointmentId: number, notificationId: number) => {
@@ -96,11 +141,14 @@ export const NotificationBell = () => {
           <CardContent className="p-0">
             {notifications.length > 0 ? (
               <div className="max-h-96 overflow-y-auto">
-                {notifications.slice(0, 10).map((notification) => (
+                {notifications
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .slice(0, 10)
+                  .map((notification) => (
                   <div
                     key={notification.id}
-                    onClick={() => handleNotificationClick(notification.id)}
-                    className={`p-4 border-b cursor-pointer hover:bg-gray-50 ${
+                    onClick={() => handleNotificationClick(notification)}
+                    className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
                       !notification.read ? "bg-blue-50" : ""
                     }`}
                   >

@@ -121,7 +121,7 @@ export const ProntuarioModal = ({ isOpen, onClose, patientName, prontuarioId }: 
       
       setSessions(existingPront?.sessoes || []);
     }
-  }, [selectedPatient, patients, prontuarios, user]);
+  }, [selectedPatient]);
   
   // Preencher sessão com dados da consulta selecionada
   const handleSelectAppointment = (appointmentId: string) => {

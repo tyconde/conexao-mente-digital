@@ -29,7 +29,7 @@ export interface Prontuario {
 export const useProntuarios = (professionalId?: number) => {
   const [prontuarios, setProntuarios] = useState<Prontuario[]>([]);
 
-  useEffect(() => {
+  const loadProntuarios = () => {
     const savedProntuarios = localStorage.getItem("prontuarios");
     if (savedProntuarios) {
       const allProntuarios = JSON.parse(savedProntuarios);
@@ -38,7 +38,27 @@ export const useProntuarios = (professionalId?: number) => {
       } else {
         setProntuarios(allProntuarios);
       }
+    } else {
+      setProntuarios([]);
     }
+  };
+
+  useEffect(() => {
+    loadProntuarios();
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === "prontuarios") {
+        loadProntuarios();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    const interval = setInterval(loadProntuarios, 1000);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
   }, [professionalId]);
 
   const addProntuario = (prontuario: Omit<Prontuario, "id" | "dataCriacao" | "dataUltimaAtualizacao">) => {
@@ -55,10 +75,7 @@ export const useProntuarios = (professionalId?: number) => {
     const updatedProntuarios = [...allProntuarios, newProntuario];
     
     localStorage.setItem("prontuarios", JSON.stringify(updatedProntuarios));
-    
-    if (!professionalId || prontuario.professionalId === professionalId) {
-      setProntuarios(prev => [...prev, newProntuario]);
-    }
+    loadProntuarios();
   };
 
   const updateProntuario = (id: string, updates: Partial<Prontuario>) => {
@@ -70,12 +87,7 @@ export const useProntuarios = (professionalId?: number) => {
       );
       
       localStorage.setItem("prontuarios", JSON.stringify(updatedProntuarios));
-      
-      if (!professionalId) {
-        setProntuarios(updatedProntuarios);
-      } else {
-        setProntuarios(updatedProntuarios.filter((p: Prontuario) => p.professionalId === professionalId));
-      }
+      loadProntuarios();
     }
   };
 
@@ -86,7 +98,7 @@ export const useProntuarios = (professionalId?: number) => {
       const updatedProntuarios = allProntuarios.filter((p: Prontuario) => p.id !== id);
       
       localStorage.setItem("prontuarios", JSON.stringify(updatedProntuarios));
-      setProntuarios(prev => prev.filter(p => p.id !== id));
+      loadProntuarios();
     }
   };
 

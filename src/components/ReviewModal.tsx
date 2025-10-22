@@ -58,6 +58,13 @@ export const ReviewModal = ({
         title: "Avaliação enviada!",
         description: "Obrigado por avaliar o profissional."
       });
+      
+      // Dispara evento para atualizar a lista de psicólogos
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'reviews',
+        newValue: localStorage.getItem('reviews')
+      }));
+      
       handleClose();
     } else {
       toast({

@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useReviews } from "./useReviews";
 
 interface RegisteredPsychologist {
   id: number;
@@ -18,10 +19,12 @@ interface RegisteredPsychologist {
   clinicAddress?: string;
   experience?: string;
   rating?: number;
+  reviewCount?: number;
 }
 
 export const useRegisteredPsychologists = () => {
   const [psychologists, setPsychologists] = useState<RegisteredPsychologist[]>([]);
+  const { getProfessionalAverageRating, getProfessionalReviews, reviews } = useReviews();
 
   const loadPsychologists = () => {
     const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
@@ -38,6 +41,11 @@ export const useRegisteredPsychologists = () => {
       const professionalPrices = JSON.parse(localStorage.getItem("professionalPrices") || "{}");
       const userPrice = professionalPrices[user.id] || 150;
 
+      // Calcular nota real baseada nas avaliações
+      const averageRating = getProfessionalAverageRating(user.id);
+      const professionalReviews = getProfessionalReviews(user.id);
+      const reviewCount = professionalReviews.length;
+
       return {
         id: user.id,
         name: user.name,
@@ -50,8 +58,9 @@ export const useRegisteredPsychologists = () => {
         price: userPrice,
         attendanceTypes: settings.attendanceTypes,
         clinicAddress: settings.address,
-        experience: "Recém cadastrado",
-        rating: 5.0
+        experience: reviewCount > 0 ? `${reviewCount} avaliação${reviewCount > 1 ? 'ões' : ''}` : "Recém cadastrado",
+        rating: averageRating || 5.0,
+        reviewCount: reviewCount
       };
     });
 
@@ -60,22 +69,26 @@ export const useRegisteredPsychologists = () => {
 
   useEffect(() => {
     loadPsychologists();
+  }, [reviews]); // Recarrega quando reviews mudar
 
+  useEffect(() => {
     // Escutar mudanças no localStorage
-    const handleStorageChange = () => {
-      loadPsychologists();
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "registeredUsers" || e.key === "reviews" || e.key === "professionalPrices" || e.key?.startsWith("professional_settings_")) {
+        loadPsychologists();
+      }
     };
 
     window.addEventListener("storage", handleStorageChange);
     
     // Também verificar periodicamente para mudanças na mesma aba
-    const interval = setInterval(loadPsychologists, 2000);
+    const interval = setInterval(loadPsychologists, 3000);
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       clearInterval(interval);
     };
-  }, []);
+  }, [reviews]);
 
   return { psychologists };
 };

@@ -27,7 +27,11 @@ const Profile = () => {
     city: "",
     state: "",
     zipCode: "",
-    profileImage: ""
+    profileImage: "",
+    age: "",
+    profession: "",
+    maritalStatus: "",
+    specialty: ""
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -54,7 +58,11 @@ const Profile = () => {
         city: userData?.city || addressParts[2] || "",
         state: userData?.state || "",
         zipCode: userData?.zipCode || "",
-        profileImage: userData?.profileImage || ""
+        profileImage: userData?.profileImage || "",
+        age: userData?.age || "",
+        profession: userData?.profession || "",
+        maritalStatus: userData?.maritalStatus || "",
+        specialty: userData?.specialty || ""
       });
     }
 
@@ -119,7 +127,15 @@ const Profile = () => {
         city: formData.city,
         state: formData.state,
         zipCode: formData.zipCode,
-        profileImage: formData.profileImage
+        profileImage: formData.profileImage,
+        ...(user.type === "patient" && {
+          age: formData.age,
+          profession: formData.profession,
+          maritalStatus: formData.maritalStatus
+        }),
+        ...(user.type === "professional" && {
+          specialty: formData.specialty
+        })
       };
       
       // Salvar de volta
@@ -308,6 +324,44 @@ const Profile = () => {
                       className="bg-gray-50"
                     />
                   </div>
+                  
+                  {user.type === "patient" && (
+                    <>
+                      <div>
+                        <Label htmlFor="age">Idade</Label>
+                        <Input
+                          id="age"
+                          value={formData.age}
+                          onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                          placeholder="Ex: 30"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="profession">Profissão</Label>
+                        <Input
+                          id="profession"
+                          value={formData.profession}
+                          onChange={(e) => setFormData({ ...formData, profession: e.target.value })}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                          placeholder="Ex: Engenheiro(a)"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="maritalStatus">Estado Civil</Label>
+                        <Input
+                          id="maritalStatus"
+                          value={formData.maritalStatus}
+                          onChange={(e) => setFormData({ ...formData, maritalStatus: e.target.value })}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                          placeholder="Ex: Solteiro(a)"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
                 
                 <div>
@@ -346,9 +400,11 @@ const Profile = () => {
                       <Label htmlFor="specialty">Especialidade</Label>
                       <Input
                         id="specialty"
-                        value={user.specialty || ""}
-                        disabled
-                        className="bg-gray-50"
+                        value={formData.specialty}
+                        onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
+                        disabled={!isEditing}
+                        className={!isEditing ? "bg-gray-50" : ""}
+                        placeholder="Ex: Psicologia Clínica"
                       />
                     </div>
                   </div>
