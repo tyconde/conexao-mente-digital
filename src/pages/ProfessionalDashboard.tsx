@@ -52,6 +52,17 @@ const ProfessionalDashboard = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState<{ id: string; name: string } | null>(null);
 
+  // Helper para buscar foto de perfil
+  const getUserProfileImage = (userId: string): string => {
+    try {
+      const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
+      const user = registeredUsers.find((u: any) => String(u.id) === String(userId));
+      return user?.profileImage || "";
+    } catch {
+      return "";
+    }
+  };
+
   // Improved redirect logic - only redirect if user is confirmed to not be professional
   useEffect(() => {
     const checkAuth = () => {
@@ -127,51 +138,100 @@ const ProfessionalDashboard = () => {
   const today = new Date().toISOString().split('T')[0];
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
+  const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+  console.log("=== DEBUG PROFESSIONAL DASHBOARD ===");
+  console.log("Total appointments:", appointments.length);
+  console.log("All appointments:", appointments);
 
   const todayAppointments = appointments.filter(apt => apt.date === today);
   const thisMonthAppointments = appointments.filter(apt => {
     const aptDate = new Date(apt.date);
     return aptDate.getMonth() === currentMonth && aptDate.getFullYear() === currentYear;
   });
-  const confirmedAppointments = appointments.filter(apt => apt.status === "confirmada");
-  const uniquePatients = new Set(appointments.map(apt => apt.patientEmail)).size;
+  
+  const lastMonthAppointments = appointments.filter(apt => {
+    const aptDate = new Date(apt.date);
+    return aptDate.getMonth() === lastMonth && aptDate.getFullYear() === lastMonthYear;
+  });
+
+  const statusLower = (s: string | undefined) => (s || "").toLowerCase();
+  const isSuccess = (s: string | undefined) => {
+    const sl = statusLower(s);
+    return sl === "confirmada" || sl === "finalizada";
+  };
+
+  const confirmedAppointments = appointments.filter(apt => statusLower(apt.status) === "confirmada");
+  const successfulAppointments = appointments.filter(apt => isSuccess(apt.status));
+  
+  // Pacientes únicos pelo id (fallback para email)
+  const uniquePatients = new Set(
+    appointments.map(apt => String((apt as any).patientId ?? apt.patientEmail ?? ""))
+  ).size;
 
   // Get professional's price
   const consultationPrice = JSON.parse(localStorage.getItem(`consultation_price_${user?.id}`) || "150");
 
-  // Calcular apenas consultas confirmadas do mês
-  const confirmedThisMonth = thisMonthAppointments.filter(apt => apt.status === "confirmada");
+  // Sucesso no mês (confirmadas ou finalizadas)
+  const successThisMonth = thisMonthAppointments.filter(apt => isSuccess(apt.status));
+  const successLastMonth = lastMonthAppointments.filter(apt => isSuccess(apt.status));
+
+  console.log("This month appointments:", thisMonthAppointments.length);
+  console.log("Successful this month (confirmada|finalizada):", successThisMonth.length);
+  console.log("Successful last month:", successLastMonth.length);
+  console.log("Total successful:", successfulAppointments.length);
+  console.log("Unique patients:", uniquePatients);
+  console.log("Consultation price:", consultationPrice);
+
+  // Calcular mudanças percentuais
+  const calculateChange = (current: number, previous: number) => {
+    if (previous === 0) return current > 0 ? "+100%" : "0%";
+    const change = ((current - previous) / previous) * 100;
+    return `${change >= 0 ? '+' : ''}${change.toFixed(0)}%`;
+  };
+
+  const thisMonthRevenue = successThisMonth.length * consultationPrice;
+  const lastMonthRevenue = successLastMonth.length * consultationPrice;
+  const thisMonthConfirmationRate = thisMonthAppointments.length > 0 
+    ? (successThisMonth.length / thisMonthAppointments.length) * 100 
+    : 0;
+  const lastMonthConfirmationRate = lastMonthAppointments.length > 0 
+    ? (successLastMonth.length / lastMonthAppointments.length) * 100 
+    : 0;
 
   const stats = [
     {
       title: "Pacientes Ativos",
       value: uniquePatients.toString(),
-      change: "+12%",
+      change: "Total de pacientes únicos",
       icon: Users,
       color: "text-blue-600"
     },
     {
       title: "Consultas Este Mês",
-      value: confirmedThisMonth.length.toString(),
-      change: "+8%",
+      value: successThisMonth.length.toString(),
+      change: calculateChange(successThisMonth.length, successLastMonth.length) + " vs mês anterior",
       icon: Calendar,
       color: "text-green-600"
     },
     {
       title: "Receita Mensal",
-      value: `R$ ${(confirmedThisMonth.length * consultationPrice).toLocaleString()}`,
-      change: "+15%",
+      value: `R$ ${thisMonthRevenue.toLocaleString()}`,
+      change: calculateChange(thisMonthRevenue, lastMonthRevenue) + " vs mês anterior",
       icon: DollarSign,
       color: "text-purple-600"
     },
     {
       title: "Taxa de Confirmação",
-      value: `${appointments.length > 0 ? Math.round((confirmedAppointments.length / appointments.length) * 100) : 0}%`,
-      change: "+3%",
+      value: `${thisMonthConfirmationRate.toFixed(0)}%`,
+      change: calculateChange(thisMonthConfirmationRate, lastMonthConfirmationRate) + " vs mês anterior",
       icon: TrendingUp,
       color: "text-orange-600"
     }
   ];
+
+  console.log("Stats calculated:", stats);
 
   // Get pending appointment requests
   const pendingRequests = appointments.filter(apt => apt.status === "pendente");
@@ -289,16 +349,16 @@ const ProfessionalDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navigation />
       
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8 flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
               Bem-vindo, {user.name}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Gerencie sua prática profissional de forma eficiente
             </p>
           </div>
@@ -307,7 +367,7 @@ const ProfessionalDashboard = () => {
 
         {/* Navegação por abas */}
         <div className="mb-8">
-          <div className="border-b border-gray-200">
+          <div className="border-b border-border">
             <nav className="-mb-px flex space-x-8">
               {[
                 { id: "overview", label: "Visão Geral", icon: BarChart },
@@ -315,16 +375,15 @@ const ProfessionalDashboard = () => {
                 { id: "prontuarios", label: "Prontuários", icon: FileText },
                 { id: "patients", label: "Pacientes", icon: Users },
                 { id: "reports", label: "Relatórios", icon: BarChart },
-                { id: "messages", label: "Mensagens", icon: MessageCircle },
-                { id: "settings", label: "Configurações", icon: Settings }
+                { id: "messages", label: "Mensagens", icon: MessageCircle }
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm ${
                     activeTab === tab.id
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
                   }`}
                 >
                   <tab.icon className="w-4 h-4 mr-2" />
@@ -344,9 +403,9 @@ const ProfessionalDashboard = () => {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                        <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                        <p className="text-sm text-green-600">{stat.change} vs mês anterior</p>
+                        <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                        <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                        <p className="text-sm text-green-600 dark:text-green-400">{stat.change} vs mês anterior</p>
                       </div>
                       <div className={`${stat.color}`}>
                         <stat.icon className="w-8 h-8" />
@@ -372,7 +431,7 @@ const ProfessionalDashboard = () => {
                 <CardContent>
                   <div className="space-y-4">
                     {pendingRequests.slice(0, 3).map((request) => (
-                      <div key={request.id} className="flex items-center justify-between p-4 bg-white rounded-lg border">
+                      <div key={request.id} className="flex items-center justify-between p-4 bg-card rounded-lg border">
                         <div className="flex items-center space-x-3">
                           <Avatar>
                             <AvatarFallback>
@@ -380,13 +439,13 @@ const ProfessionalDashboard = () => {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium text-gray-900">{request.patientName}</p>
-                            <p className="text-sm text-gray-600">{request.patientEmail}</p>
+                            <p className="font-medium text-foreground">{request.patientName}</p>
+                            <p className="text-sm text-muted-foreground">{request.patientEmail}</p>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge className={`text-xs ${getAttendanceTypeBadge(request.attendanceType)}`}>
                                 {getAttendanceTypeLabel(request.attendanceType)}
                               </Badge>
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-muted-foreground">
                                 {formatDate(request.date)} às {request.time}
                               </span>
                             </div>
@@ -498,32 +557,117 @@ const ProfessionalDashboard = () => {
                 </CardContent>
               </Card>
 
-              {/* Mensagens recentes placeholder */}
+              {/* Mensagens recentes */}
               <Card>
-    <CardContent className="space-y-3 max-h-64 overflow-y-auto">
-      {conversations.length === 0 ? (
-        <p className="text-gray-500 text-sm">Nenhuma mensagem recebida.</p>
-      ) : (
-        conversations
-          .slice(0, 5) // mostra só as 5 últimas conversas
-          .map((conv) => (
-            <div
-              key={conv.id}
-              className="flex justify-between items-center border-b last:border-0 pb-2"
-            >
-              <div>
-                <p className="font-medium text-sm">
-                  {conv.patientName || conv.professionalName}
-                </p>
-                <p className="text-xs text-gray-600 line-clamp-1">
-                  {conv.lastMessage}
-                </p>
-              </div>
-            </div>
-          ))
-      )}
-    </CardContent>
-  </Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center">
+                        <MessageCircle className="w-5 h-5 mr-2" />
+                        Mensagens Recentes
+                      </CardTitle>
+                      <CardDescription>
+                        Suas últimas conversas com pacientes
+                      </CardDescription>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      onClick={() => setIsMessagesOpen(true)}
+                      variant="outline"
+                    >
+                      Ver Todas
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {conversations.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                        <p>Nenhuma mensagem recebida</p>
+                      </div>
+                    ) : (
+                      conversations
+                        .slice(0, 5)
+                        .map((conv) => {
+                          const patientName = conv.patientName || "Paciente";
+                          const patientId = conv.patientId || "";
+                          const patientImage = patientId ? getUserProfileImage(patientId) : "";
+                          
+                          const lastMessageTime = conv.lastMessageTime 
+                            ? new Date(conv.lastMessageTime)
+                            : new Date();
+                          const now = new Date();
+                          const diffMs = now.getTime() - lastMessageTime.getTime();
+                          const diffMins = Math.floor(diffMs / 60000);
+                          const diffHours = Math.floor(diffMs / 3600000);
+                          const diffDays = Math.floor(diffMs / 86400000);
+                          
+                          let timeAgo = "";
+                          if (diffMins < 1) timeAgo = "Agora";
+                          else if (diffMins < 60) timeAgo = `${diffMins}min`;
+                          else if (diffHours < 24) timeAgo = `${diffHours}h`;
+                          else if (diffDays < 7) timeAgo = `${diffDays}d`;
+                          else timeAgo = lastMessageTime.toLocaleDateString('pt-BR', { 
+                            day: '2-digit', 
+                            month: '2-digit' 
+                          });
+
+                          return (
+                            <div
+                              key={conv.id}
+                              onClick={() => {
+                                setSelectedConversationId(conv.id);
+                                setIsMessagesOpen(true);
+                                markAsRead(conv.id);
+                              }}
+                              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border"
+                            >
+                              <Avatar className="w-12 h-12">
+                                <AvatarImage src={patientImage} alt={patientName} className="object-cover" />
+                                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                  {patientName.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                  <p className="font-medium text-sm text-gray-900 truncate">
+                                    {patientName}
+                                  </p>
+                                  <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+                                    {timeAgo}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-600 line-clamp-1">
+                                  {conv.lastMessage || "Sem mensagens"}
+                                </p>
+                              </div>
+                              
+                              {conv.unreadCount && conv.unreadCount > 0 && (
+                                <Badge 
+                                  variant="default" 
+                                  className="h-6 min-w-[24px] flex items-center justify-center px-2 text-xs flex-shrink-0"
+                                >
+                                  {conv.unreadCount > 9 ? "9+" : conv.unreadCount}
+                                </Badge>
+                              )}
+                            </div>
+                          );
+                        })
+                    )}
+                  </div>
+                  {conversations.length > 5 && (
+                    <Button 
+                      className="w-full mt-4" 
+                      variant="outline" 
+                      onClick={() => setIsMessagesOpen(true)}
+                    >
+                      Ver Todas as Mensagens
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
             </div>
 
             {/* Ações rápidas */}
@@ -602,12 +746,12 @@ const ProfessionalDashboard = () => {
                 <CardContent>
                   <div className="space-y-4">
                     {pendingRequests.map((request) => (
-                      <div key={request.id} data-appointment-id={request.id} className="flex justify-between items-center bg-white p-4 rounded shadow">
+                      <div key={request.id} data-appointment-id={request.id} className="flex justify-between items-center bg-card p-4 rounded shadow">
                         <div>
-                          <p className="font-medium text-gray-900">{request.patientName}</p>
-                          <p className="text-sm text-gray-600">{request.type}</p>
-                          <p className="text-sm text-gray-500">{formatDate(request.date)} às {request.time}</p>
-                          <p className="text-sm text-gray-500">{request.patientEmail}</p>
+                          <p className="font-medium text-foreground">{request.patientName}</p>
+                          <p className="text-sm text-muted-foreground">{request.type}</p>
+                          <p className="text-sm text-muted-foreground">{formatDate(request.date)} às {request.time}</p>
+                          <p className="text-sm text-muted-foreground">{request.patientEmail}</p>
                           <Badge className={`text-xs ${getAttendanceTypeBadge(request.attendanceType)} mt-1`}>
                             {getAttendanceTypeLabel(request.attendanceType)}
                           </Badge>
@@ -685,7 +829,7 @@ const ProfessionalDashboard = () => {
 
                         return sorted.length > 0 ? (
                           sorted.map((appointment) => (
-                            <div key={appointment.id} data-appointment-id={appointment.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                            <div key={appointment.id} data-appointment-id={appointment.id} className="border rounded-lg p-4 bg-card shadow-sm">
                               <p><strong>Paciente:</strong> {appointment.patientName}</p>
                               <p><strong>Data:</strong> {appointment.date}</p>
                               <p><strong>Hora:</strong> {appointment.time}</p>
@@ -736,8 +880,8 @@ const ProfessionalDashboard = () => {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Gerenciamento de Prontuários</h3>
-                <p className="text-gray-600">Visualize e gerencie os prontuários dos seus pacientes</p>
+                <h3 className="text-lg font-medium text-foreground">Gerenciamento de Prontuários</h3>
+                <p className="text-muted-foreground">Visualize e gerencie os prontuários dos seus pacientes</p>
               </div>
               <Button 
                 onClick={handleCreateNewProntuario}
@@ -755,7 +899,7 @@ const ProfessionalDashboard = () => {
                     prontuarios
                       .sort((a, b) => new Date(b.dataUltimaAtualizacao).getTime() - new Date(a.dataUltimaAtualizacao).getTime())
                       .map((prontuario) => (
-                        <div key={prontuario.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                        <div key={prontuario.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent">
                           <div className="flex items-center space-x-4">
                             <Avatar>
                               <AvatarFallback>
@@ -763,9 +907,9 @@ const ProfessionalDashboard = () => {
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium text-gray-900">{prontuario.paciente}</p>
-                              <p className="text-sm text-gray-600">Idade: {prontuario.idade} • Estado Civil: {prontuario.estadoCivil}</p>
-                              <p className="text-sm text-gray-500">
+                              <p className="font-medium text-foreground">{prontuario.paciente}</p>
+                              <p className="text-sm text-muted-foreground">Idade: {prontuario.idade} • Estado Civil: {prontuario.estadoCivil}</p>
+                              <p className="text-sm text-muted-foreground">
                                 Última atualização: {new Date(prontuario.dataUltimaAtualizacao).toLocaleDateString('pt-BR')}
                               </p>
                             </div>
@@ -789,8 +933,8 @@ const ProfessionalDashboard = () => {
                         </div>
                       ))
                   ) : (
-                    <div className="text-center py-12 text-gray-500">
-                      <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                    <div className="text-center py-12 text-muted-foreground">
+                      <FileText className="w-16 h-16 mx-auto mb-4 text-muted" />
                       <p className="text-lg font-medium mb-2">Nenhum prontuário encontrado</p>
                       <p className="mb-4">Comece criando seu primeiro prontuário</p>
                     </div>
@@ -817,11 +961,11 @@ const ProfessionalDashboard = () => {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Central de Mensagens</h3>
-                <p className="text-gray-600">Gerencie suas conversas com os pacientes</p>
+                <h3 className="text-lg font-medium text-foreground">Central de Mensagens</h3>
+                <p className="text-muted-foreground">Gerencie suas conversas com os pacientes</p>
               </div>
               <div className="flex items-center gap-4">
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted-foreground">
                   {conversations.length} conversa{conversations.length !== 1 ? 's' : ''}
                 </div>
                 {conversations.reduce((total, conv) => total + (conv.unreadCount || 0), 0) > 0 && (
@@ -835,9 +979,9 @@ const ProfessionalDashboard = () => {
             {conversations.length === 0 ? (
               <Card>
                 <CardContent className="text-center py-12">
-                  <MessageCircle className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                  <p className="text-gray-600 text-lg font-medium mb-2">Nenhuma mensagem ainda</p>
-                  <p className="text-gray-500 text-sm">
+                  <MessageCircle className="w-16 h-16 mx-auto text-muted mb-4" />
+                  <p className="text-muted-foreground text-lg font-medium mb-2">Nenhuma mensagem ainda</p>
+                  <p className="text-muted-foreground text-sm">
                     As conversas com seus pacientes aparecerão aqui
                   </p>
                 </CardContent>
@@ -866,7 +1010,7 @@ const ProfessionalDashboard = () => {
                             </Avatar>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <p className="font-medium text-gray-900">
+                                <p className="font-medium text-foreground">
                                   {conv.patientName}
                                 </p>
                                 {(conv.unreadCount || 0) > 0 && (
@@ -875,13 +1019,13 @@ const ProfessionalDashboard = () => {
                                   </Badge>
                                 )}
                               </div>
-                              <p className="text-sm text-gray-600 line-clamp-2">
+                              <p className="text-sm text-muted-foreground line-clamp-2">
                                 {conv.lastMessage}
                               </p>
                             </div>
                           </div>
                           <div className="text-right ml-4 flex-shrink-0">
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                               {new Date(conv.lastMessageTime || "").toLocaleDateString('pt-BR', {
                                 day: '2-digit',
                                 month: '2-digit',
@@ -896,14 +1040,6 @@ const ProfessionalDashboard = () => {
                   ))}
               </div>
             )}
-          </div>
-        )}
-
-        {activeTab === "settings" && (
-          <div className="text-center py-12">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Configurações do Perfil
-            </h3>
           </div>
         )}
       </div>

@@ -27,9 +27,13 @@ export const useProfessionalAppointments = () => {
 
   const loadAppointments = () => {
     if (!user?.id) {
+      console.log("No user ID, clearing appointments");
       setAppointments([]);
       return;
     }
+    
+    console.log("=== DEBUG useProfessionalAppointments ===");
+    console.log("User ID:", user.id);
     
     const saved = localStorage.getItem("appointments");
     if (saved) {
@@ -39,9 +43,17 @@ export const useProfessionalAppointments = () => {
         professionalId: Number(a.professionalId),
         patientId: typeof a.patientId === "string" ? a.patientId : Number(a.patientId),
       }));
+      
+      console.log("All appointments from storage:", all.length);
+      console.log("All appointments:", all);
+      
       const filtered = all.filter(a => a.professionalId === Number(user.id));
+      console.log("Filtered appointments for professional:", filtered.length);
+      console.log("Filtered appointments:", filtered);
+      
       setAppointments(filtered);
     } else {
+      console.log("No appointments in storage");
       setAppointments([]);
     }
   };

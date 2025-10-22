@@ -26,6 +26,16 @@ export const ReportsSection = ({ consultationPrice }: ReportsSectionProps) => {
   const { appointments } = useProfessionalAppointments();
   const { patients } = usePatients();
 
+  const isSuccess = (status?: string) => {
+    const s = (status || '').toLowerCase();
+    return s === 'confirmada' || s === 'finalizada';
+  };
+
+  console.log("=== DEBUG REPORTS SECTION ===");
+  console.log("Total appointments for reports:", appointments.length);
+  console.log("Consultation price:", consultationPrice);
+  console.log("Total patients:", patients.length);
+
   // Dados para gráfico mensal
   const monthlyData = () => {
     const last6Months = [];
@@ -38,7 +48,7 @@ export const ReportsSection = ({ consultationPrice }: ReportsSectionProps) => {
         const aptDate = new Date(apt.date);
         return aptDate.getMonth() === date.getMonth() && 
                aptDate.getFullYear() === date.getFullYear() &&
-               apt.status === "confirmada";
+               isSuccess(apt.status);
       });
       
       last6Months.push({
@@ -48,23 +58,34 @@ export const ReportsSection = ({ consultationPrice }: ReportsSectionProps) => {
       });
     }
     
+    console.log("Monthly data for chart:", last6Months);
     return last6Months;
   };
 
   // Dados para gráfico de pizza (tipos de atendimento)
   const attendanceTypeData = () => {
-    const presencial = appointments.filter(apt => apt.attendanceType === "presencial").length;
-    const remoto = appointments.filter(apt => apt.attendanceType === "remoto").length;
+    const presencial = appointments.filter(apt => 
+      apt.attendanceType === "presencial" && isSuccess(apt.status)
+    ).length;
+    const remoto = appointments.filter(apt => 
+      apt.attendanceType === "remoto" && isSuccess(apt.status)
+    ).length;
     
-    return [
+    const data = [
       { name: "Presencial", value: presencial, color: "#3b82f6" },
       { name: "Remoto", value: remoto, color: "#10b981" }
     ];
+    
+    console.log("Attendance type data:", data);
+    return data;
   };
 
-  const totalRevenue = appointments.filter(apt => apt.status === "confirmada").length * consultationPrice;
+  const totalRevenue = appointments.filter(apt => isSuccess(apt.status)).length * consultationPrice;
   const avgAppointmentsPerPatient = patients.length > 0 ? 
-    appointments.filter(apt => apt.status === "confirmada").length / patients.length : 0;
+    appointments.filter(apt => isSuccess(apt.status)).length / patients.length : 0;
+
+  console.log("Total revenue:", totalRevenue);
+  console.log("Avg appointments per patient:", avgAppointmentsPerPatient);
 
   return (
     <div className="space-y-6">
@@ -85,9 +106,12 @@ export const ReportsSection = ({ consultationPrice }: ReportsSectionProps) => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Consultas Confirmadas</p>
+                <p className="text-sm font-medium text-gray-600">Consultas Concluídas</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {appointments.filter(apt => apt.status === "confirmada").length}
+                  {appointments.filter(apt => {
+                    const s = (apt.status || '').toLowerCase();
+                    return s === 'confirmada' || s === 'finalizada';
+                  }).length}
                 </p>
               </div>
               <Calendar className="w-8 h-8 text-green-600" />

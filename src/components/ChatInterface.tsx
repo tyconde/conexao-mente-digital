@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Circle } from "lucide-react";
@@ -13,6 +13,17 @@ interface ChatInterfaceProps {
   userType: "patient" | "professional";
   onSendMessage: (content: string) => void;
 }
+
+// Helper para buscar foto de perfil
+const getUserProfileImage = (userId: string): string => {
+  try {
+    const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
+    const user = registeredUsers.find((u: any) => String(u.id) === String(userId));
+    return user?.profileImage || "";
+  } catch {
+    return "";
+  }
+};
 
 export const ChatInterface = ({ 
   conversation, 
@@ -71,12 +82,21 @@ export const ChatInterface = ({
         : conversation.patientName)
     : recipientName;
 
+  const recipientId = conversation
+    ? (userType === "patient" 
+        ? conversation.professionalId 
+        : conversation.patientId)
+    : undefined;
+
+  const recipientImage = recipientId ? getUserProfileImage(recipientId) : "";
+
   return (
     <div className="flex flex-col h-full">
       {/* Cabeçalho */}
       <div className="p-4 border-b bg-background">
         <div className="flex items-center gap-3">
           <Avatar className="w-10 h-10">
+            <AvatarImage src={recipientImage} alt={displayName} className="object-cover" />
             <AvatarFallback>
               {displayName?.charAt(0).toUpperCase() || "?"}
             </AvatarFallback>
@@ -97,14 +117,27 @@ export const ChatInterface = ({
           <>
             {conversation.messages.map((message: Message) => {
               const isOwn = message.senderId === userId;
+              const senderInitial = message.senderName?.charAt(0).toUpperCase() || "?";
+              const senderImage = getUserProfileImage(message.senderId);
+              
               return (
                 <div
                   key={message.id}
                   className={cn(
-                    "flex",
+                    "flex gap-2",
                     isOwn ? "justify-end" : "justify-start"
                   )}
                 >
+                  {/* Avatar para mensagens de outros */}
+                  {!isOwn && (
+                    <Avatar className="w-8 h-8 flex-shrink-0">
+                      <AvatarImage src={senderImage} alt={message.senderName} className="object-cover" />
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                        {senderInitial}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  
                   <div
                     className={cn(
                       "max-w-[70%] rounded-2xl px-4 py-2 shadow-sm",
@@ -129,6 +162,16 @@ export const ChatInterface = ({
                       {formatTime(message.timestamp)}
                     </p>
                   </div>
+                  
+                  {/* Avatar para mensagens próprias */}
+                  {isOwn && (
+                    <Avatar className="w-8 h-8 flex-shrink-0">
+                      <AvatarImage src={senderImage} alt={message.senderName} className="object-cover" />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
+                        {senderInitial}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                 </div>
               );
             })}

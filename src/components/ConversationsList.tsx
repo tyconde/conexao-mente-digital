@@ -4,15 +4,29 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Pin, Clock, Filter } from "lucide-react";
+import { Search, Pin, Clock, Filter, UserPlus, MessageSquarePlus } from "lucide-react";
 import { Conversation } from "@/hooks/useMessages";
 import { cn } from "@/lib/utils";
+import { AvailableContact } from "@/hooks/useAvailableContacts";
+
+// Helper para buscar foto de perfil
+const getUserProfileImage = (userId: string): string => {
+  try {
+    const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
+    const user = registeredUsers.find((u: any) => String(u.id) === String(userId));
+    return user?.profileImage || "";
+  } catch {
+    return "";
+  }
+};
 
 interface ConversationsListProps {
   conversations: Conversation[];
   selectedConversation: Conversation | null;
   onSelectConversation: (conversation: Conversation) => void;
   userType: "patient" | "professional";
+  availableContacts: AvailableContact[];
+  onStartNewChat: (contact: AvailableContact) => void;
 }
 
 type FilterType = "all" | "unread" | "recent";
@@ -21,11 +35,14 @@ export const ConversationsList = ({
   conversations, 
   selectedConversation, 
   onSelectConversation,
-  userType 
+  userType,
+  availableContacts,
+  onStartNewChat
 }: ConversationsListProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
+  const [showNewChatSection, setShowNewChatSection] = useState(false);
 
   const togglePin = (conversationId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -75,9 +92,20 @@ export const ConversationsList = ({
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
 
+  // Filtrar contatos disponíveis que ainda não têm conversa
+  const contactsWithoutConversation = availableContacts.filter(contact => {
+    const conversationId = userType === "patient"
+      ? `${contact.id}-${contact.id}` // Isso será corrigido na lógica de criação
+      : `${contact.id}-${contact.id}`;
+    return !conversations.some(conv => 
+      (userType === "patient" && conv.professionalId === contact.id) ||
+      (userType === "professional" && conv.patientId === contact.id)
+    );
+  });
+
   return (
     <div className="flex flex-col h-full">
-      {/* Busca */}
+      {/* Busca e Botão Nova Conversa */}
       <div className="p-4 border-b space-y-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -88,6 +116,19 @@ export const ConversationsList = ({
             className="pl-9"
           />
         </div>
+
+        {/* Botão para nova conversa */}
+        {contactsWithoutConversation.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowNewChatSection(!showNewChatSection)}
+            className="w-full"
+          >
+            <MessageSquarePlus className="w-4 h-4 mr-2" />
+            {showNewChatSection ? "Ocultar contatos" : "Nova conversa"}
+          </Button>
+        )}
 
         {/* Filtros rápidos */}
         <div className="flex gap-2">
@@ -120,12 +161,73 @@ export const ConversationsList = ({
         </div>
       </div>
 
+      {/* Seção de novos contatos */}
+      {showNewChatSection && contactsWithoutConversation.length > 0 && (
+        <div className="border-b bg-muted/30">
+          <div className="p-3 bg-background border-b">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <UserPlus className="w-4 h-4" />
+              Selecione o {userType === "patient" ? "profissional" : "paciente"} para conversar
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Contatos disponíveis (consultas confirmadas ou histórico de atendimento)
+            </p>
+          </div>
+          <div className="max-h-[200px] overflow-y-auto divide-y">
+            {contactsWithoutConversation.map((contact) => (
+              <div
+                key={contact.id}
+                onClick={() => onStartNewChat(contact)}
+                className="p-3 cursor-pointer hover:bg-accent/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage 
+                      src={getUserProfileImage(contact.id)} 
+                      alt={contact.name} 
+                      className="object-cover" 
+                    />
+                    <AvatarFallback>
+                      {contact.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-sm truncate">
+                      {contact.name}
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Consulta em {new Date(contact.appointmentDate).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <MessageSquarePlus className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Lista de conversas */}
       <div className="flex-1 overflow-y-auto">
-        {filteredConversations.length === 0 ? (
+        {filteredConversations.length === 0 && !showNewChatSection ? (
+          <div className="text-center py-8 px-4">
+            <p className="text-sm font-medium text-muted-foreground mb-2">
+              {availableContacts.length === 0 
+                ? "Você ainda não possui histórico de consultas para iniciar uma conversa."
+                : searchTerm 
+                  ? "Nenhuma conversa encontrada" 
+                  : "Nenhuma conversa ainda"}
+            </p>
+            {availableContacts.length > 0 && !searchTerm && (
+              <p className="text-xs text-muted-foreground">
+                Clique em "Nova conversa" para começar
+              </p>
+            )}
+          </div>
+        ) : filteredConversations.length === 0 && showNewChatSection ? (
           <div className="text-center py-8 px-4">
             <p className="text-sm text-muted-foreground">
-              {searchTerm ? "Nenhuma conversa encontrada" : "Nenhuma conversa ainda"}
+              {searchTerm ? "Nenhuma conversa encontrada" : "Todas as conversas estão acima"}
             </p>
           </div>
         ) : (
@@ -134,6 +236,10 @@ export const ConversationsList = ({
               const contactName = userType === "patient" 
                 ? conversation.professionalName 
                 : conversation.patientName;
+              const contactId = userType === "patient"
+                ? conversation.professionalId
+                : conversation.patientId;
+              const contactImage = contactId ? getUserProfileImage(contactId) : "";
               const isPinned = pinnedIds.includes(conversation.id);
               const isSelected = selectedConversation?.id === conversation.id;
               const hasUnread = (conversation.unreadCount || 0) > 0;
@@ -154,6 +260,11 @@ export const ConversationsList = ({
 
                   <div className="flex gap-3">
                     <Avatar className="w-12 h-12">
+                      <AvatarImage 
+                        src={contactImage} 
+                        alt={contactName} 
+                        className="object-cover" 
+                      />
                       <AvatarFallback>
                         {contactName?.charAt(0).toUpperCase() || "?"}
                       </AvatarFallback>

@@ -4,6 +4,7 @@ import { MessageCircle } from "lucide-react";
 import { Conversation } from "@/hooks/useMessages";
 import { useAuth } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
+import { useAvailableContacts, AvailableContact } from "@/hooks/useAvailableContacts";
 import { ConversationsList } from "./ConversationsList";
 import { ChatInterface } from "./ChatInterface";
 
@@ -30,6 +31,7 @@ export const MessagesModal = ({
   const userType = user?.type === "professional" ? "professional" : "patient";
   const userName = user?.name || "Usuário";
   const { conversations, sendMessage, markAsRead } = useMessages(user?.id?.toString(), userType, userName);
+  const { contacts: availableContacts } = useAvailableContacts(user?.id?.toString(), userType);
 
   useEffect(() => {
     if (!open || !initialConversationId) return;
@@ -77,6 +79,33 @@ export const MessagesModal = ({
     markAsRead(conversation.id);
   };
 
+  const handleStartNewChat = (contact: AvailableContact) => {
+    // Verificar se já existe conversa com este contato
+    const existingConv = conversations.find(conv => 
+      (userType === "patient" && conv.professionalId === contact.id) ||
+      (userType === "professional" && conv.patientId === contact.id)
+    );
+
+    if (existingConv) {
+      setSelectedConversation(existingConv);
+      markAsRead(existingConv.id);
+    } else {
+      // Criar uma conversa temporária para iniciar o chat
+      const newConv: Conversation = {
+        id: userType === "patient" ? `${user?.id}-${contact.id}` : `${contact.id}-${user?.id}`,
+        patientId: userType === "patient" ? user?.id?.toString() || "" : contact.id,
+        patientName: userType === "patient" ? userName : contact.name,
+        professionalId: userType === "professional" ? user?.id?.toString() || "" : contact.id,
+        professionalName: userType === "professional" ? userName : contact.name,
+        lastMessage: "",
+        lastMessageTime: new Date().toISOString(),
+        unreadCount: 0,
+        messages: []
+      };
+      setSelectedConversation(newConv);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl h-[85vh] p-0 gap-0">
@@ -95,6 +124,8 @@ export const MessagesModal = ({
               selectedConversation={selectedConversation}
               onSelectConversation={handleSelectConversation}
               userType={userType}
+              availableContacts={availableContacts}
+              onStartNewChat={handleStartNewChat}
             />
           </div>
 

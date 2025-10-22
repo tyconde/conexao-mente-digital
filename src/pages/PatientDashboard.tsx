@@ -100,7 +100,7 @@ const PatientDashboard = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md">
           <CardHeader>
             <CardTitle>Acesso Restrito</CardTitle>
@@ -119,16 +119,16 @@ const PatientDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navigation />
       
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8 flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
               Olá, {user.name}! Como podemos ajudar você hoje?
             </h1>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Encontre o psicólogo ideal para suas necessidades
             </p>
           </div>
@@ -157,7 +157,7 @@ const PatientDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold mb-1">Meus Agendamentos</h3>
-                  <p className="text-sm text-gray-600">Visualize e gerencie suas consultas</p>
+                  <p className="text-sm text-muted-foreground">Visualize e gerencie suas consultas</p>
                 </div>
                 <Button onClick={() => window.location.href = "/appointments"}>
                   <Calendar className="w-4 h-4 mr-2" />
@@ -181,7 +181,7 @@ const PatientDashboard = () => {
 
           <div className="lg:col-span-3">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold text-foreground">
                 Psicólogos Disponíveis ({filteredPsychologists.length})
               </h2>
             </div>
@@ -189,8 +189,8 @@ const PatientDashboard = () => {
             {filteredPsychologists.length === 0 ? (
               <Card className="text-center py-12">
                 <CardContent>
-                  <div className="text-gray-500 mb-4">
-                    <User className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <div className="text-muted-foreground mb-4">
+                    <User className="w-16 h-16 mx-auto mb-4 text-muted" />
                     <h3 className="text-lg font-medium mb-2">Nenhum psicólogo encontrado</h3>
                     <p className="text-sm">
                       {psychologists.length === 0 
@@ -223,7 +223,7 @@ const PatientDashboard = () => {
                         <div className="flex-grow space-y-3">
                           <div>
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-xl font-semibold text-gray-900">
+                              <h3 className="text-xl font-semibold text-foreground">
                                 {psychologist.name}
                               </h3>
                               <Badge className="bg-green-100 text-green-800">
@@ -231,17 +231,17 @@ const PatientDashboard = () => {
                                 CRP: {psychologist.crp}
                               </Badge>
                             </div>
-                            <p className="text-gray-600">{psychologist.specialty}</p>
-                            <p className="text-sm text-gray-500">{psychologist.experience}</p>
+                            <p className="text-muted-foreground">{psychologist.specialty}</p>
+                            <p className="text-sm text-muted-foreground">{psychologist.experience}</p>
                           </div>
 
                           <div className="flex items-center gap-4">
                             <div className="flex items-center">
                               <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                               <span className="text-sm font-medium text-gray-700 ml-1">
+                               <span className="text-sm font-medium text-foreground ml-1">
                                 {psychologist.rating.toFixed(1)}
                               </span>
-                              <span className="text-sm text-gray-500 ml-1">
+                              <span className="text-sm text-muted-foreground ml-1">
                                 {psychologist.reviewCount && psychologist.reviewCount > 0 
                                   ? `(${psychologist.reviewCount} avaliação${psychologist.reviewCount > 1 ? 'ões' : ''})`
                                   : "(Novo)"
@@ -266,7 +266,7 @@ const PatientDashboard = () => {
                           </div>
 
                           {psychologist.attendanceTypes?.presencial && psychologist.clinicAddress && (
-                            <p className="text-xs text-gray-500 line-clamp-2">
+                            <p className="text-xs text-muted-foreground line-clamp-2">
                               {psychologist.clinicAddress}
                             </p>
                           )}
@@ -274,10 +274,10 @@ const PatientDashboard = () => {
 
                         <div className="flex-shrink-0 text-right space-y-3">
                           <div>
-                            <div className="text-2xl font-bold text-gray-900">
+                            <div className="text-2xl font-bold text-foreground">
                               R$ {psychologist.price}
                             </div>
-                            <div className="text-sm text-gray-500">por sessão</div>
+                            <div className="text-sm text-muted-foreground">por sessão</div>
                           </div>
 
                           <div className="space-y-2">

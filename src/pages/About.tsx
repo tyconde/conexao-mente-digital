@@ -72,14 +72,14 @@ const About = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navigation />
       
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8 flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Sobre o PsiConnect</h1>
-            <p className="text-xl text-gray-600 max-w-2xl">
+            <h1 className="text-4xl font-bold text-foreground mb-4">Sobre o PsiConnect</h1>
+            <p className="text-xl text-muted-foreground max-w-2xl">
               Democratizando o acesso à saúde mental através da tecnologia e cuidado humanizado
             </p>
           </div>
@@ -103,7 +103,7 @@ const About = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700 leading-relaxed">
+              <p className="text-foreground leading-relaxed">
                 Democratizar o acesso à saúde mental, conectando pacientes a psicólogos qualificados 
                 através de uma plataforma segura, eficiente e humanizada. Acreditamos que toda pessoa 
                 merece ter acesso a cuidados de qualidade para sua saúde mental.
@@ -119,7 +119,7 @@ const About = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700 leading-relaxed">
+              <p className="text-foreground leading-relaxed">
                 Ser a principal plataforma de saúde mental no Brasil, reconhecida pela excelência 
                 no atendimento, inovação tecnológica e impacto positivo na vida das pessoas, 
                 tornando o cuidado psicológico mais acessível e efetivo.
@@ -130,7 +130,7 @@ const About = () => {
 
         {/* Características e Diferenciais */}
         <div className="mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+          <h2 className="text-3xl font-bold text-foreground mb-8 text-center">
             Por que escolher o PsiConnect?
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -143,7 +143,7 @@ const About = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600 text-sm">{feature.description}</p>
+                  <p className="text-muted-foreground text-sm">{feature.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -152,7 +152,7 @@ const About = () => {
 
         {/* Depoimentos */}
         <div className="mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+          <h2 className="text-3xl font-bold text-foreground mb-8 text-center">
             Depoimentos Reais
           </h2>
           <div className="grid md:grid-cols-3 gap-6">
@@ -167,7 +167,7 @@ const About = () => {
                     </Avatar>
                     <div>
                       <h3 className="font-semibold">{testimonial.name}</h3>
-                      <p className="text-sm text-gray-600">{testimonial.role}</p>
+                      <p className="text-sm text-muted-foreground">{testimonial.role}</p>
                     </div>
                   </div>
                   <div className="flex mb-3">
@@ -175,7 +175,7 @@ const About = () => {
                       <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
                     ))}
                   </div>
-                  <p className="text-gray-700 text-sm italic">"{testimonial.comment}"</p>
+                  <p className="text-foreground text-sm italic">"{testimonial.comment}"</p>
                 </CardContent>
               </Card>
             ))}
@@ -192,7 +192,7 @@ const About = () => {
               {stats.map((stat, index) => (
                 <div key={index}>
                   <h3 className="text-3xl font-bold text-primary mb-2">{stat.value}</h3>
-                  <p className="text-gray-600 text-sm">{stat.label}</p>
+                  <p className="text-muted-foreground text-sm">{stat.label}</p>
                 </div>
               ))}
             </div>
@@ -206,12 +206,12 @@ const About = () => {
           </CardHeader>
           <CardContent>
             <div className="text-center max-w-3xl mx-auto">
-              <p className="text-gray-700 leading-relaxed mb-6">
+              <p className="text-foreground leading-relaxed mb-6">
                 No PsiConnect, acreditamos que a saúde mental é um direito fundamental. 
                 Por isso, trabalhamos incansavelmente para garantir que nossa plataforma 
                 ofereça não apenas conveniência, mas também segurança, qualidade e resultados reais.
               </p>
-              <p className="text-gray-700 leading-relaxed">
+              <p className="text-foreground leading-relaxed">
                 Cada profissional em nossa rede é cuidadosamente verificado, e cada recurso 
                 é desenvolvido pensando no bem-estar de nossos usuários. Juntos, estamos 
                 construindo um futuro onde o cuidado com a saúde mental é acessível a todos.

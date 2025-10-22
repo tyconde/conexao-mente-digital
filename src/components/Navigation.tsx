@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { NotificationBell } from "./NotificationBell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { User, Heart, ChevronDown } from "lucide-react";
+import { User, Heart, ChevronDown, Settings } from "lucide-react";
 
 export const Navigation = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -24,7 +24,7 @@ export const Navigation = () => {
   }, [user]);
 
   return (
-    <header className="bg-white shadow-sm border-b">
+    <header className="bg-white dark:bg-gray-900 shadow-sm border-b dark:border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
@@ -34,13 +34,13 @@ export const Navigation = () => {
           </div>
 
           <nav className="hidden md:flex space-x-8">
-            <Link to="/" className="text-gray-700 hover:text-primary transition-colors">
+            <Link to="/" className="text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
               Início
             </Link>
-            <Link to="/about" className="text-gray-700 hover:text-primary transition-colors">
+            <Link to="/about" className="text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
               Sobre
             </Link>
-            <Link to="/contact" className="text-gray-700 hover:text-primary transition-colors">
+            <Link to="/contact" className="text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
               Contato
             </Link>
           </nav>
@@ -74,6 +74,10 @@ export const Navigation = () => {
                     <DropdownMenuItem onClick={() => navigate("/favorites")} className="cursor-pointer">
                       <Heart className="w-4 h-4 mr-2 text-red-500" />
                       Favoritos
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/settings")} className="cursor-pointer">
+                      <Settings className="w-4 h-4 mr-2" />
+                      Configurações
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

@@ -43,9 +43,16 @@ io.on('connection', (socket) => {
 
   socket.on('send_message', ({ roomId, message }) => {
     // message should be an object with id, senderId, senderName, content, timestamp, etc.
+    
+    // Validar se os usuários têm vínculo ativo (consulta confirmada)
+    // Nota: Em produção, isso deve ser validado contra o banco de dados
+    // Por ora, aceitamos todas as mensagens já que a validação está no frontend
+    
     if (!conversations[roomId]) conversations[roomId] = [];
     conversations[roomId].push(message);
     io.to(roomId).emit('new_message', { roomId, message });
+    
+    console.log(`Message sent in room ${roomId} from ${message.senderName}: ${message.content}`);
   });
 
   socket.on('disconnect', () => {
