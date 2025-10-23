@@ -5,12 +5,14 @@ import { Label } from "@/components/ui/label";
 interface DetailedAddressFormProps {
   street: string;
   number: string;
+  complement?: string;
   neighborhood: string;
   city: string;
   state: string;
   zipCode: string;
   onStreetChange: (value: string) => void;
   onNumberChange: (value: string) => void;
+  onComplementChange?: (value: string) => void;
   onNeighborhoodChange: (value: string) => void;
   onCityChange: (value: string) => void;
   onStateChange: (value: string) => void;
@@ -21,12 +23,14 @@ interface DetailedAddressFormProps {
 export const DetailedAddressForm = ({
   street,
   number,
+  complement = "",
   neighborhood,
   city,
   state,
   zipCode,
   onStreetChange,
   onNumberChange,
+  onComplementChange,
   onNeighborhoodChange,
   onCityChange,
   onStateChange,
@@ -64,6 +68,17 @@ export const DetailedAddressForm = ({
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
+          <Label htmlFor="complement">Complemento</Label>
+          <Input
+            id="complement"
+            value={complement}
+            onChange={(e) => onComplementChange?.(e.target.value)}
+            disabled={disabled}
+            className={disabled ? "bg-gray-50" : ""}
+            placeholder="Apto, bloco, etc."
+          />
+        </div>
+        <div>
           <Label htmlFor="neighborhood">Bairro *</Label>
           <Input
             id="neighborhood"
@@ -75,21 +90,9 @@ export const DetailedAddressForm = ({
             required
           />
         </div>
-        <div>
-          <Label htmlFor="zipCode">CEP *</Label>
-          <Input
-            id="zipCode"
-            value={zipCode}
-            onChange={(e) => onZipCodeChange(e.target.value)}
-            disabled={disabled}
-            className={disabled ? "bg-gray-50" : ""}
-            placeholder="00000-000"
-            required
-          />
-        </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <Label htmlFor="city">Cidade *</Label>
           <Input
@@ -112,6 +115,18 @@ export const DetailedAddressForm = ({
             className={disabled ? "bg-gray-50" : ""}
             placeholder="SP"
             maxLength={2}
+            required
+          />
+        </div>
+        <div>
+          <Label htmlFor="zipCode">CEP *</Label>
+          <Input
+            id="zipCode"
+            value={zipCode}
+            onChange={(e) => onZipCodeChange(e.target.value)}
+            disabled={disabled}
+            className={disabled ? "bg-gray-50" : ""}
+            placeholder="00000-000"
             required
           />
         </div>

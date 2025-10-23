@@ -18,8 +18,8 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => boolean;
-  register: (userData: Omit<User, 'id'>) => boolean;
+  login: (email: string, password: string) => { success: boolean; message?: string };
+  register: (userData: Omit<User, 'id'>) => { success: boolean; message?: string };
   logout: () => void;
   isAuthenticated: boolean;
   clearAllUsers: () => void;
@@ -37,15 +37,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  const register = (userData: Omit<User, 'id'>): boolean => {
+  const register = (userData: Omit<User, 'id'>): { success: boolean; message?: string } => {
     try {
       // Verificar se o email já existe
       const existingUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
       const emailExists = existingUsers.some((u: User) => u.email === userData.email);
       
       if (emailExists) {
-        alert("Este email já está cadastrado!");
-        return false;
+        return { success: false, message: "Este email já está cadastrado! Tente fazer login ou use outro email." };
       }
 
       // Criar novo usuário
@@ -64,14 +63,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(userForLogin as User);
       localStorage.setItem("currentUser", JSON.stringify(userForLogin));
 
-      return true;
+      return { success: true };
     } catch (error) {
       console.error("Erro no registro:", error);
-      return false;
+      return { success: false, message: "Ocorreu um erro ao realizar o cadastro. Por favor, tente novamente." };
     }
   };
 
-  const login = (email: string, password: string): boolean => {
+  const login = (email: string, password: string): { success: boolean; message?: string } => {
     try {
       const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
       const foundUser = registeredUsers.find((u: User) => 
@@ -83,14 +82,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         delete userForLogin.password; // Não manter senha no estado
         setUser(userForLogin as User);
         localStorage.setItem("currentUser", JSON.stringify(userForLogin));
-        return true;
+        return { success: true };
       } else {
-        alert("Email ou senha incorretos!");
-        return false;
+        return { success: false, message: "Email ou senha incorretos! Verifique seus dados e tente novamente." };
       }
     } catch (error) {
       console.error("Erro no login:", error);
-      return false;
+      return { success: false, message: "Ocorreu um erro ao fazer login. Por favor, tente novamente." };
     }
   };
 

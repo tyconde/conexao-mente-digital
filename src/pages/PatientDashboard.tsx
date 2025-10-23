@@ -14,7 +14,10 @@ import {
   User,
   Home,
   MapPin,
-  Monitor
+  Monitor,
+  Eye,
+  Ear,
+  Hand
 } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { useAuth } from "@/hooks/useAuth";
@@ -236,18 +239,21 @@ const PatientDashboard = () => {
                           </div>
 
                           <div className="flex items-center gap-4">
-                            <div className="flex items-center">
-                              <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                               <span className="text-sm font-medium text-foreground ml-1">
-                                {psychologist.rating.toFixed(1)}
+                            {psychologist.reviewCount && psychologist.reviewCount > 0 ? (
+                              <div className="flex items-center">
+                                <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                                <span className="text-sm font-medium text-foreground ml-1">
+                                  {psychologist.rating.toFixed(1)}
+                                </span>
+                                <span className="text-sm text-muted-foreground ml-1">
+                                  ({psychologist.reviewCount} avaliação{psychologist.reviewCount > 1 ? 'ões' : ''})
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">
+                                Sem avaliações ainda
                               </span>
-                              <span className="text-sm text-muted-foreground ml-1">
-                                {psychologist.reviewCount && psychologist.reviewCount > 0 
-                                  ? `(${psychologist.reviewCount} avaliação${psychologist.reviewCount > 1 ? 'ões' : ''})`
-                                  : "(Novo)"
-                                }
-                              </span>
-                            </div>
+                            )}
                           </div>
 
                           <div className="flex flex-wrap gap-2">
@@ -261,6 +267,24 @@ const PatientDashboard = () => {
                               <Badge variant="outline" className="flex items-center gap-1">
                                 <MapPin className="w-3 h-3" />
                                 Presencial
+                              </Badge>
+                            )}
+                            {psychologist.knowsLibras && (
+                              <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-200">
+                                <Hand className="w-3 h-3" />
+                                Fluente em Libras
+                              </Badge>
+                            )}
+                            {psychologist.hasVisualImpairment && (
+                              <Badge variant="outline" className="flex items-center gap-1 bg-purple-50 text-purple-700 border-purple-200">
+                                <Eye className="w-3 h-3" />
+                                Deficiência Visual
+                              </Badge>
+                            )}
+                            {psychologist.hasHearingImpairment && (
+                              <Badge variant="outline" className="flex items-center gap-1 bg-purple-50 text-purple-700 border-purple-200">
+                                <Ear className="w-3 h-3" />
+                                Deficiência Auditiva
                               </Badge>
                             )}
                           </div>

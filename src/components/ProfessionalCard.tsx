@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Star, Calendar, MessageCircle, MapPin, Monitor } from "lucide-react";
+import { Star, Calendar, MessageCircle, MapPin, Monitor, Eye, Ear, Hand } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useReviews } from "@/hooks/useReviews";
 import { useState } from "react";
@@ -37,7 +37,7 @@ export const ProfessionalCard = ({
   const averageRating = getProfessionalAverageRating(id);
   const reviews = getProfessionalReviews(id);
   const reviewCount = reviews.length;
-  const displayRating = averageRating > 0 ? averageRating : rating;
+  const hasReviews = reviewCount > 0;
 
   // Carregar configurações do profissional
   const professionalSettings = JSON.parse(
@@ -45,10 +45,15 @@ export const ProfessionalCard = ({
     '{"attendanceTypes": {"remoto": true, "presencial": false}, "address": ""}'
   );
 
-  // Buscar dados completos do profissional para pegar a imagem correta
+  // Buscar dados completos do profissional para pegar a imagem correta e acessibilidade
   const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
   const professionalData = registeredUsers.find((u: any) => u.id === id);
   const profileImage = professionalData?.profileImage || image;
+  const accessibility = {
+    hasVisualImpairment: professionalData?.hasVisualImpairment || false,
+    hasHearingImpairment: professionalData?.hasHearingImpairment || false,
+    knowsLibras: professionalData?.knowsLibras || false
+  };
 
   const handleSchedule = () => {
     if (!user) {
@@ -110,25 +115,31 @@ export const ProfessionalCard = ({
           </div>
 
           <div className="flex items-center space-x-2">
-            <div className="flex items-center">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star
-                  key={star}
-                  className={`w-4 h-4 ${
-                    star <= Math.round(displayRating)
-                      ? "text-yellow-400 fill-current"
-                      : "text-gray-300"
-                  }`}
-                />
-              ))}
-              <span className="text-sm font-medium text-foreground ml-2">
-                {displayRating.toFixed(1)}
-              </span>
-            </div>
-            <span className="text-sm text-muted-foreground">•</span>
-            <span className="text-sm text-muted-foreground">
-              {reviewCount > 0 ? `${reviewCount} avaliações` : 'Sem avaliações'}
-            </span>
+            {hasReviews ? (
+              <>
+                <div className="flex items-center">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`w-4 h-4 ${
+                        star <= Math.round(averageRating)
+                          ? "text-yellow-400 fill-current"
+                          : "text-gray-300"
+                      }`}
+                    />
+                  ))}
+                  <span className="text-sm font-medium text-foreground ml-2">
+                    {averageRating.toFixed(1)}
+                  </span>
+                </div>
+                <span className="text-sm text-muted-foreground">•</span>
+                <span className="text-sm text-muted-foreground">
+                  {reviewCount} avaliação{reviewCount !== 1 ? 'ões' : ''}
+                </span>
+              </>
+            ) : (
+              <span className="text-sm text-muted-foreground">Sem avaliações ainda</span>
+            )}
           </div>
 
           {/* Tipos de Atendimento */}
@@ -154,6 +165,33 @@ export const ProfessionalCard = ({
               </p>
             )}
           </div>
+
+          {/* Acessibilidade */}
+          {(accessibility.hasVisualImpairment || accessibility.hasHearingImpairment || accessibility.knowsLibras) && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-foreground">Acessibilidade:</p>
+              <div className="flex flex-wrap gap-2">
+                {accessibility.hasVisualImpairment && (
+                  <Badge variant="secondary" className="flex items-center gap-1 bg-blue-100 text-blue-800">
+                    <Eye className="w-3 h-3" />
+                    Deficiência Visual
+                  </Badge>
+                )}
+                {accessibility.hasHearingImpairment && (
+                  <Badge variant="secondary" className="flex items-center gap-1 bg-purple-100 text-purple-800">
+                    <Ear className="w-3 h-3" />
+                    Deficiência Auditiva
+                  </Badge>
+                )}
+                {accessibility.knowsLibras && (
+                  <Badge variant="secondary" className="flex items-center gap-1 bg-green-100 text-green-800">
+                    <Hand className="w-3 h-3" />
+                    Fluente em Libras
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <div>

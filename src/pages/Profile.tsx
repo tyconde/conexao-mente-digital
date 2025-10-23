@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Save, Home, Key } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { FavoritesList } from "@/components/FavoritesList";
 import { ProfileImageUpload } from "@/components/ProfileImageUpload";
 import { DetailedAddressForm } from "@/components/DetailedAddressForm";
+import { SpecialtySelector } from "@/components/SpecialtySelector";
 
 const Profile = () => {
   const { user } = useAuth();
@@ -23,6 +25,7 @@ const Profile = () => {
     phone: "",
     street: "",
     number: "",
+    complement: "",
     neighborhood: "",
     city: "",
     state: "",
@@ -31,8 +34,16 @@ const Profile = () => {
     age: "",
     profession: "",
     maritalStatus: "",
-    specialty: ""
+    specialty: "",
+    crp: "",
+    hasVisualImpairment: false,
+    hasHearingImpairment: false,
+    knowsLibras: false,
+    hasAutism: false,
+    hasDownSyndrome: false,
+    hasADHD: false
   });
+  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -45,25 +56,36 @@ const Profile = () => {
       const userData = JSON.parse(localStorage.getItem("registeredUsers") || "[]")
         .find((u: any) => u.id === user.id);
       
-      // Parse do endereço existente se estiver em formato antigo
-      const addressParts = (user.address || "").split(", ");
-      
       setFormData({
         name: user.name || "",
         email: user.email || "",
         phone: user.phone || "",
-        street: userData?.street || addressParts[0] || "",
+        street: userData?.street || "",
         number: userData?.number || "",
-        neighborhood: userData?.neighborhood || addressParts[1] || "",
-        city: userData?.city || addressParts[2] || "",
+        complement: userData?.complement || "",
+        neighborhood: userData?.neighborhood || "",
+        city: userData?.city || "",
         state: userData?.state || "",
-        zipCode: userData?.zipCode || "",
+        zipCode: userData?.zipCode || userData?.cep || "",
         profileImage: userData?.profileImage || "",
         age: userData?.age || "",
         profession: userData?.profession || "",
         maritalStatus: userData?.maritalStatus || "",
-        specialty: userData?.specialty || ""
+        specialty: userData?.specialty || "",
+        crp: userData?.crp || "",
+        hasVisualImpairment: userData?.hasVisualImpairment || false,
+        hasHearingImpairment: userData?.hasHearingImpairment || false,
+        knowsLibras: userData?.knowsLibras || false,
+        hasAutism: userData?.hasAutism || false,
+        hasDownSyndrome: userData?.hasDownSyndrome || false,
+        hasADHD: userData?.hasADHD || false
       });
+
+      // Carregar especialidades para o selector
+      if (user.type === "professional" && userData?.specialty) {
+        const specialtiesArray = userData.specialty.split(",").map((s: string) => s.trim());
+        setSelectedSpecialties(specialtiesArray);
+      }
     }
 
     // Scroll para seção de favoritos se houver hash na URL
@@ -112,7 +134,15 @@ const Profile = () => {
     
     if (userIndex !== -1) {
       // Criar endereço completo para compatibilidade
-      const fullAddress = `${formData.street}, ${formData.number}, ${formData.neighborhood}, ${formData.city} - ${formData.state}`;
+      const addressParts = [
+        formData.street,
+        formData.number ? `nº ${formData.number}` : '',
+        formData.complement,
+        formData.neighborhood,
+        formData.city,
+        formData.state
+      ].filter(Boolean);
+      const fullAddress = addressParts.join(', ');
       
       // Atualizar dados do usuário
       registeredUsers[userIndex] = {
@@ -123,18 +153,27 @@ const Profile = () => {
         address: fullAddress,
         street: formData.street,
         number: formData.number,
+        complement: formData.complement,
         neighborhood: formData.neighborhood,
         city: formData.city,
         state: formData.state,
         zipCode: formData.zipCode,
+        cep: formData.zipCode,
         profileImage: formData.profileImage,
+        hasVisualImpairment: formData.hasVisualImpairment,
+        hasHearingImpairment: formData.hasHearingImpairment,
+        knowsLibras: formData.knowsLibras,
         ...(user.type === "patient" && {
           age: formData.age,
           profession: formData.profession,
-          maritalStatus: formData.maritalStatus
+          maritalStatus: formData.maritalStatus,
+          hasAutism: formData.hasAutism,
+          hasDownSyndrome: formData.hasDownSyndrome,
+          hasADHD: formData.hasADHD
         }),
         ...(user.type === "professional" && {
-          specialty: formData.specialty
+          specialty: selectedSpecialties.join(", "),
+          crp: formData.crp
         })
       };
       
@@ -370,12 +409,14 @@ const Profile = () => {
                     <DetailedAddressForm
                       street={formData.street}
                       number={formData.number}
+                      complement={formData.complement}
                       neighborhood={formData.neighborhood}
                       city={formData.city}
                       state={formData.state}
                       zipCode={formData.zipCode}
                       onStreetChange={(value) => setFormData({ ...formData, street: value })}
                       onNumberChange={(value) => setFormData({ ...formData, number: value })}
+                      onComplementChange={(value) => setFormData({ ...formData, complement: value })}
                       onNeighborhoodChange={(value) => setFormData({ ...formData, neighborhood: value })}
                       onCityChange={(value) => setFormData({ ...formData, city: value })}
                       onStateChange={(value) => setFormData({ ...formData, state: value })}
@@ -386,29 +427,141 @@ const Profile = () => {
                 </div>
 
                 {user.type === "professional" && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-4">
                     <div>
                       <Label htmlFor="crp">CRP</Label>
                       <Input
                         id="crp"
-                        value={user.crp || ""}
+                        value={formData.crp || ""}
                         disabled
                         className="bg-gray-50"
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="specialty">Especialidade</Label>
-                      <Input
-                        id="specialty"
-                        value={formData.specialty}
-                        onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
-                        disabled={!isEditing}
-                        className={!isEditing ? "bg-gray-50" : ""}
-                        placeholder="Ex: Psicologia Clínica"
+                    {isEditing ? (
+                      <SpecialtySelector 
+                        selectedSpecialties={selectedSpecialties}
+                        onChange={setSelectedSpecialties}
                       />
-                    </div>
+                    ) : (
+                      <div>
+                        <Label htmlFor="specialty">Especialidades</Label>
+                        <Input
+                          id="specialty"
+                          value={selectedSpecialties.join(", ")}
+                          disabled
+                          className="bg-gray-50"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
+
+                {/* Acessibilidade */}
+                <div className="space-y-3 pt-4 border-t">
+                  <Label className="text-base">Acessibilidade</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="hasVisualImpairment"
+                        checked={formData.hasVisualImpairment}
+                        onCheckedChange={(checked) => 
+                          setFormData({ ...formData, hasVisualImpairment: checked as boolean })
+                        }
+                        disabled={!isEditing}
+                      />
+                      <label
+                        htmlFor="hasVisualImpairment"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        Tenho deficiência visual
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="hasHearingImpairment"
+                        checked={formData.hasHearingImpairment}
+                        onCheckedChange={(checked) => 
+                          setFormData({ ...formData, hasHearingImpairment: checked as boolean })
+                        }
+                        disabled={!isEditing}
+                      />
+                      <label
+                        htmlFor="hasHearingImpairment"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        Tenho deficiência auditiva
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="knowsLibras"
+                        checked={formData.knowsLibras}
+                        onCheckedChange={(checked) => 
+                          setFormData({ ...formData, knowsLibras: checked as boolean })
+                        }
+                        disabled={!isEditing}
+                      />
+                      <label
+                        htmlFor="knowsLibras"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        Sou fluente em Libras
+                      </label>
+                    </div>
+                    {user.type === "patient" && (
+                      <>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="hasAutism"
+                            checked={formData.hasAutism}
+                            onCheckedChange={(checked) => 
+                              setFormData({ ...formData, hasAutism: checked as boolean })
+                            }
+                            disabled={!isEditing}
+                          />
+                          <label
+                            htmlFor="hasAutism"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            Tenho autismo/TEA
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="hasDownSyndrome"
+                            checked={formData.hasDownSyndrome}
+                            onCheckedChange={(checked) => 
+                              setFormData({ ...formData, hasDownSyndrome: checked as boolean })
+                            }
+                            disabled={!isEditing}
+                          />
+                          <label
+                            htmlFor="hasDownSyndrome"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            Tenho síndrome de Down
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="hasADHD"
+                            checked={formData.hasADHD}
+                            onCheckedChange={(checked) => 
+                              setFormData({ ...formData, hasADHD: checked as boolean })
+                            }
+                            disabled={!isEditing}
+                          />
+                          <label
+                            htmlFor="hasADHD"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            Tenho TDAH
+                          </label>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
 
                 {isEditing && (
                   <div className="text-sm text-gray-600">

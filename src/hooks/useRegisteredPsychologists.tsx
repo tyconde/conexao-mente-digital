@@ -20,6 +20,9 @@ interface RegisteredPsychologist {
   experience?: string;
   rating?: number;
   reviewCount?: number;
+  hasVisualImpairment?: boolean;
+  hasHearingImpairment?: boolean;
+  knowsLibras?: boolean;
 }
 
 export const useRegisteredPsychologists = () => {
@@ -60,7 +63,10 @@ export const useRegisteredPsychologists = () => {
         clinicAddress: settings.address,
         experience: reviewCount > 0 ? `${reviewCount} avaliação${reviewCount > 1 ? 'ões' : ''}` : "Recém cadastrado",
         rating: averageRating || 5.0,
-        reviewCount: reviewCount
+        reviewCount: reviewCount,
+        hasVisualImpairment: user.hasVisualImpairment || false,
+        hasHearingImpairment: user.hasHearingImpairment || false,
+        knowsLibras: user.knowsLibras || false
       };
     });
 
