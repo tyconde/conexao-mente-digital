@@ -14,8 +14,9 @@ interface MessagesModalProps {
   recipientId?: string;
   recipientName?: string;
   userId: string;
-  userType: "patient" | "professional"; // aqui muda de "psychologist" para "professional"
+  userType: "patient" | "professional";
   initialConversationId?: string;
+  appointmentId?: number;
 }
 
 export const MessagesModal = ({
@@ -24,6 +25,7 @@ export const MessagesModal = ({
   recipientId,
   recipientName,
   initialConversationId,
+  appointmentId,
 }: MessagesModalProps) => {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const { user } = useAuth();
@@ -137,6 +139,7 @@ export const MessagesModal = ({
               userId={user?.id?.toString()}
               userType={userType}
               onSendMessage={handleSendMessage}
+              appointmentId={appointmentId}
             />
           </div>
         </div>

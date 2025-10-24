@@ -21,6 +21,8 @@ import {
 } from "@/lib/validation";
 import { fetchAddressByCEP, formatCEP } from "@/lib/cep";
 import { SpecialtySelector } from "./SpecialtySelector";
+import { BadgeSelector } from "./BadgeSelector";
+import { BadgeId } from "@/constants/professionalData";
 import { toast } from "sonner";
 
 interface AuthModalProps {
@@ -59,6 +61,7 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
   });
   
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
+  const [selectedBadges, setSelectedBadges] = useState<BadgeId[]>([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
@@ -285,11 +288,15 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
         ...(userType === "patient" && {
           age: formData.age,
           profession: formData.profession,
-          maritalStatus: formData.maritalStatus
+          maritalStatus: formData.maritalStatus,
+          hasAutism: formData.hasAutism,
+          hasDownSyndrome: formData.hasDownSyndrome,
+          hasADHD: formData.hasADHD
         }),
         ...(userType === "professional" && {
           crp: formData.crp,
-          specialty: selectedSpecialties.join(", ")
+          specialty: selectedSpecialties.join(", "),
+          badges: selectedBadges
         })
       };
 
@@ -335,6 +342,7 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
       hasADHD: false
     });
     setSelectedSpecialties([]);
+    setSelectedBadges([]);
     setErrors({});
     setTouchedFields({});
     setCurrentTab("personal");
@@ -606,9 +614,14 @@ export const AuthModal = ({ isOpen, onClose, mode: initialMode, userType: initia
                         )}
                       </div>
                       
-                      <SpecialtySelector 
+                       <SpecialtySelector 
                         selectedSpecialties={selectedSpecialties}
                         onChange={setSelectedSpecialties}
+                      />
+
+                      <BadgeSelector 
+                        selectedBadges={selectedBadges}
+                        onChange={setSelectedBadges}
                       />
                     </>
                   )}

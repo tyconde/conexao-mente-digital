@@ -10,24 +10,9 @@ interface SpecialtySelectorProps {
   onChange: (specialties: string[]) => void;
 }
 
-const COMMON_SPECIALTIES = [
-  "Psicologia Clínica",
-  "Psicanálise",
-  "Terapia Cognitivo-Comportamental (TCC)",
-  "Psicologia Infantil",
-  "Psicologia do Adolescente",
-  "Psicologia Familiar",
-  "Psicologia Organizacional",
-  "Neuropsicologia",
-  "Psicologia Hospitalar",
-  "Psicoterapia de Casal",
-  "Terapia de Grupo",
-  "Psicologia Esportiva",
-  "Autismo e TEA",
-  "Síndrome de Down",
-  "TDAH",
-  "Ansiedade e Depressão"
-];
+import { PSYCHOLOGY_SPECIALTIES } from "@/constants/professionalData";
+
+const COMMON_SPECIALTIES = [...PSYCHOLOGY_SPECIALTIES];
 
 export const SpecialtySelector = ({ selectedSpecialties, onChange }: SpecialtySelectorProps) => {
   const [showOther, setShowOther] = useState(false);
@@ -56,9 +41,10 @@ export const SpecialtySelector = ({ selectedSpecialties, onChange }: SpecialtySe
   return (
     <div className="space-y-4">
       <div>
-        <Label className="text-base mb-3 block">Especialidades *</Label>
-        <p className="text-sm text-muted-foreground mb-3">
-          Selecione uma ou mais especialidades
+        <Label className="text-base mb-2 block">Áreas de Atuação *</Label>
+        <p className="text-sm text-muted-foreground mb-4">
+          Selecione as áreas da psicologia em que você atua profissionalmente. 
+          Essas são suas especialidades principais.
         </p>
 
         {/* Especialidades selecionadas */}

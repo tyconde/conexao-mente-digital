@@ -10,14 +10,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { User, FileText, Calendar, Clock } from "lucide-react";
+import { MessageCircle, FileText, UserCircle, User, Calendar } from "lucide-react";
 import { usePatients } from "@/hooks/usePatients";
 
 interface PatientsSectionProps {
   onViewProntuario: (patientName: string, prontuarioId?: number) => void;
+  onSendMessage?: (patientId: string | number, patientName: string, appointmentId?: number) => void;
 }
 
-export const PatientsSection = ({ onViewProntuario }: PatientsSectionProps) => {
+export const PatientsSection = ({ onViewProntuario, onSendMessage }: PatientsSectionProps) => {
   const { patients } = usePatients();
 
   const formatDate = (dateStr: string) => {
@@ -160,6 +161,16 @@ export const PatientsSection = ({ onViewProntuario }: PatientsSectionProps) => {
                         >
                           <FileText className="w-4 h-4 mr-1" />
                           Ver Prontuário
+                        </Button>
+                      )}
+                      {onSendMessage && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onSendMessage(patient.id, patient.name)}
+                        >
+                          <MessageCircle className="w-4 h-4 mr-1" />
+                          Mensagem
                         </Button>
                       )}
                     </div>

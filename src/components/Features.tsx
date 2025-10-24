@@ -43,13 +43,13 @@ export const Features = () => {
   ];
 
   return (
-    <section id="features" className="py-20 px-4 bg-gray-50">
+    <section id="features" className="py-20 px-4 bg-background">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Recursos Avançados
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Nossa plataforma oferece tudo que você precisa para uma experiência completa 
             e segura no atendimento psicológico digital
           </p>
@@ -57,17 +57,17 @@ export const Features = () => {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => (
-            <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
+            <Card key={index} className="border shadow-lg hover:shadow-xl transition-all duration-300">
               <CardHeader className="text-center pb-4">
-                <div className={`w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-4 ${feature.color}`}>
+                <div className={`w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4 ${feature.color}`}>
                   <feature.icon className="w-8 h-8" />
                 </div>
-                <CardTitle className="text-xl font-semibold text-gray-900">
+                <CardTitle className="text-xl font-semibold">
                   {feature.title}
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-muted-foreground leading-relaxed">
                   {feature.description}
                 </p>
               </CardContent>

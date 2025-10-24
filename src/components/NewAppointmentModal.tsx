@@ -20,6 +20,7 @@ interface NewAppointmentModalProps {
     attendanceType: string;
     status: "confirmada" | "pendente";
     notes?: string;
+    meetLink?: string;
     professionalId: number;
     professionalName: string;
     patientId: number;
@@ -52,6 +53,13 @@ export const NewAppointmentModal = ({
     '{"attendanceTypes": {"remoto": true, "presencial": false}}'
   );
 
+  const generateMeetLink = () => {
+    // Gera um ID único para a sala Jitsi Meet usando timestamp e string aleatória
+    const timestamp = Date.now().toString(36);
+    const randomStr = Math.random().toString(36).substring(2, 10);
+    return `https://meet.jit.si/consulta-${timestamp}-${randomStr}`;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -72,6 +80,7 @@ export const NewAppointmentModal = ({
 
     onCreateAppointment({
       ...formData,
+      meetLink: formData.attendanceType === "remoto" ? generateMeetLink() : undefined,
       professionalId: professionalId || user?.id || 0,
       professionalName: user?.name || "",
       patientId: Date.now(), // Temporary ID for manual appointments

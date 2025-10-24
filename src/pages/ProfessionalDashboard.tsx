@@ -51,6 +51,7 @@ const ProfessionalDashboard = () => {
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState<{ id: string; name: string } | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<number | undefined>(undefined);
 
   // Helper para buscar foto de perfil
   const getUserProfileImage = (userId: string): string => {
@@ -299,8 +300,23 @@ const ProfessionalDashboard = () => {
     setShowProntuarioModal(true);
   };
 
-  const handleOpenMessage = (patientId: string | number, patientName: string) => {
+  const handleOpenMessage = (patientId: string | number, patientName: string, appointmentId?: number) => {
     setSelectedRecipient({ id: String(patientId), name: patientName });
+    
+    // Se não foi passado appointmentId, buscar o próximo appointment confirmado e remoto desse paciente
+    if (!appointmentId) {
+      const nextAppointment = appointments.find(apt => 
+        String(apt.patientId) === String(patientId) &&
+        apt.status === "confirmada" &&
+        apt.attendanceType === "remoto" &&
+        apt.meetLink &&
+        new Date(apt.date + ' ' + apt.time) >= new Date()
+      );
+      setSelectedAppointmentId(nextAppointment?.id);
+    } else {
+      setSelectedAppointmentId(appointmentId);
+    }
+    
     setIsMessagesOpen(true);
   };
 
@@ -449,6 +465,18 @@ const ProfessionalDashboard = () => {
                                 {formatDate(request.date)} às {request.time}
                               </span>
                             </div>
+                            {request.attendanceType === "remoto" && request.meetLink && (
+                              <div className="mt-1">
+                                <a 
+                                  href={request.meetLink} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-blue-600 hover:text-blue-700 underline"
+                                >
+                                  Entrar na Videochamada
+                                </a>
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex gap-2">
@@ -466,6 +494,14 @@ const ProfessionalDashboard = () => {
                             className="text-red-600 border-red-300 hover:bg-red-50"
                           >
                             Rejeitar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="link"
+                            className="text-blue-600"
+                            onClick={() => handleOpenMessage(request.patientId, request.patientName, request.id)}
+                          >
+                            <MessageCircle className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
@@ -510,9 +546,9 @@ const ProfessionalDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {upcomingAppointments.length > 0 ? (
+                     {upcomingAppointments.length > 0 ? (
                       upcomingAppointments.map((appointment) => (
-                        <div key={appointment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div key={appointment.id} className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                           <div className="flex items-center space-x-3">
                             <Avatar>
                               <AvatarFallback>
@@ -520,16 +556,28 @@ const ProfessionalDashboard = () => {
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium text-gray-900">{appointment.patientName}</p>
-                              <p className="text-sm text-gray-600">{appointment.type}</p>
+                              <p className="font-medium text-foreground">{appointment.patientName}</p>
+                              <p className="text-sm text-muted-foreground">{appointment.type}</p>
                               <Badge className={`text-xs ${getAttendanceTypeBadge(appointment.attendanceType)}`}>
                                 {getAttendanceTypeLabel(appointment.attendanceType)}
                               </Badge>
+                              {appointment.attendanceType === "remoto" && appointment.meetLink && (
+                                <div className="mt-1">
+                                  <a 
+                                    href={appointment.meetLink} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 hover:text-blue-700 underline"
+                                  >
+                                    Entrar na Videochamada
+                                  </a>
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="font-medium text-gray-900">{appointment.time}</p>
-                            <p className="text-sm text-gray-600">{formatDate(appointment.date)}</p>
+                            <p className="font-medium text-foreground">{appointment.time}</p>
+                            <p className="text-sm text-muted-foreground">{formatDate(appointment.date)}</p>
                             <Badge 
                               className={`mt-1 ${
                                 appointment.status === "confirmada" 
@@ -543,8 +591,8 @@ const ProfessionalDashboard = () => {
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Calendar className="w-12 h-12 mx-auto mb-4 text-muted" />
                         <p>Nenhum agendamento próximo</p>
                       </div>
                     )}
@@ -582,8 +630,8 @@ const ProfessionalDashboard = () => {
                 <CardContent>
                   <div className="space-y-3">
                     {conversations.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <div className="text-center py-8 text-muted-foreground">
+                        <MessageCircle className="w-12 h-12 mx-auto mb-4 text-muted" />
                         <p>Nenhuma mensagem recebida</p>
                       </div>
                     ) : (
@@ -618,10 +666,20 @@ const ProfessionalDashboard = () => {
                               key={conv.id}
                               onClick={() => {
                                 setSelectedConversationId(conv.id);
+                                
+                                // Buscar appointment relacionado ao paciente
+                                const relatedAppointment = appointments.find(apt => 
+                                  String(apt.patientId) === String(conv.patientId) &&
+                                  apt.status === "confirmada" &&
+                                  apt.attendanceType === "remoto" &&
+                                  new Date(apt.date + ' ' + apt.time) >= new Date()
+                                );
+                                setSelectedAppointmentId(relatedAppointment?.id);
+                                
                                 setIsMessagesOpen(true);
                                 markAsRead(conv.id);
                               }}
-                              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border"
+                              className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors border"
                             >
                               <Avatar className="w-12 h-12">
                                 <AvatarImage src={patientImage} alt={patientName} className="object-cover" />
@@ -632,14 +690,14 @@ const ProfessionalDashboard = () => {
                               
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between mb-1">
-                                  <p className="font-medium text-sm text-gray-900 truncate">
+                                  <p className="font-medium text-sm text-foreground truncate">
                                     {patientName}
                                   </p>
-                                  <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+                                  <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
                                     {timeAgo}
                                   </span>
                                 </div>
-                                <p className="text-sm text-gray-600 line-clamp-1">
+                                <p className="text-sm text-muted-foreground line-clamp-1">
                                   {conv.lastMessage || "Sem mensagens"}
                                 </p>
                               </div>
@@ -755,6 +813,18 @@ const ProfessionalDashboard = () => {
                           <Badge className={`text-xs ${getAttendanceTypeBadge(request.attendanceType)} mt-1`}>
                             {getAttendanceTypeLabel(request.attendanceType)}
                           </Badge>
+                            {request.attendanceType === "remoto" && request.meetLink && (
+                              <div className="mt-2">
+                                <a 
+                                  href={request.meetLink} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-blue-600 hover:text-blue-700 underline"
+                                >
+                                  Entrar na Videochamada
+                                </a>
+                              </div>
+                            )}
                         </div>
                         <div className="flex flex-col gap-2 text-right">
                           <div className="flex gap-2">
@@ -778,7 +848,7 @@ const ProfessionalDashboard = () => {
                             size="sm"
                             variant="link"
                             className="text-blue-600 underline p-0"
-                            onClick={() => handleOpenMessage(request.patientId, request.patientName)}
+                            onClick={() => handleOpenMessage(request.patientId, request.patientName, request.id)}
                           >
                             Enviar mensagem
                           </Button>
@@ -829,13 +899,29 @@ const ProfessionalDashboard = () => {
 
                         return sorted.length > 0 ? (
                           sorted.map((appointment) => (
-                            <div key={appointment.id} data-appointment-id={appointment.id} className="border rounded-lg p-4 bg-card shadow-sm">
+                             <div key={appointment.id} data-appointment-id={appointment.id} className="border rounded-lg p-4 bg-card shadow-sm">
                               <p><strong>Paciente:</strong> {appointment.patientName}</p>
                               <p><strong>Data:</strong> {appointment.date}</p>
                               <p><strong>Hora:</strong> {appointment.time}</p>
                               <p><strong>Tipo:</strong> {appointment.type}</p>
                               <p><strong>Email:</strong> {appointment.patientEmail}</p>
                               <p><strong>Observações:</strong> {appointment.notes || "Nenhuma"}</p>
+                              <Badge className={`text-xs ${getAttendanceTypeBadge(appointment.attendanceType)} mt-1`}>
+                                {getAttendanceTypeLabel(appointment.attendanceType)}
+                              </Badge>
+                              {appointment.attendanceType === "remoto" && appointment.meetLink && (
+                                <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
+                                  <p className="text-sm font-medium text-blue-900 mb-1">Link da Videochamada (Jitsi Meet):</p>
+                                  <a 
+                                    href={appointment.meetLink} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-700 underline text-sm break-all"
+                                  >
+                                    {appointment.meetLink}
+                                  </a>
+                                </div>
+                              )}
                               <Badge 
                                 className={`mt-2 ${
                                   appointment.status === "confirmada" 
@@ -948,6 +1034,7 @@ const ProfessionalDashboard = () => {
         {activeTab === "patients" && (
           <PatientsSection 
             onViewProntuario={handleViewProntuario}
+            onSendMessage={handleOpenMessage}
           />
         )}
 
@@ -996,6 +1083,16 @@ const ProfessionalDashboard = () => {
                       onClick={() => {
                         markAsRead(conv.id);
                         setSelectedConversationId(conv.id);
+                        
+                        // Buscar appointment relacionado ao paciente
+                        const relatedAppointment = appointments.find(apt => 
+                          String(apt.patientId) === String(conv.patientId) &&
+                          apt.status === "confirmada" &&
+                          apt.attendanceType === "remoto" &&
+                          new Date(apt.date + ' ' + apt.time) >= new Date()
+                        );
+                        setSelectedAppointmentId(relatedAppointment?.id);
+                        
                         setIsMessagesOpen(true);
                       }}
                       className="cursor-pointer hover:shadow-md transition-shadow"
@@ -1081,13 +1178,17 @@ const ProfessionalDashboard = () => {
         open={isMessagesOpen}
         onOpenChange={(open) => {
           setIsMessagesOpen(open);
-          if (!open) setSelectedRecipient(null);
+          if (!open) {
+            setSelectedRecipient(null);
+            setSelectedAppointmentId(undefined);
+          }
         }}
         initialConversationId={selectedConversationId || undefined}
         recipientId={selectedRecipient?.id}
         recipientName={selectedRecipient?.name}
         userId={user?.id?.toString() || ""}
         userType="professional"
+        appointmentId={selectedAppointmentId}
       />
 
     </div>

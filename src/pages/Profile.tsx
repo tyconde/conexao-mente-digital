@@ -13,6 +13,9 @@ import { FavoritesList } from "@/components/FavoritesList";
 import { ProfileImageUpload } from "@/components/ProfileImageUpload";
 import { DetailedAddressForm } from "@/components/DetailedAddressForm";
 import { SpecialtySelector } from "@/components/SpecialtySelector";
+import { BadgeSelector } from "@/components/BadgeSelector";
+import { BadgeId, PROFESSIONAL_BADGES } from "@/constants/professionalData";
+import { Badge } from "@/components/ui/badge";
 
 const Profile = () => {
   const { user } = useAuth();
@@ -44,6 +47,7 @@ const Profile = () => {
     hasADHD: false
   });
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
+  const [selectedBadges, setSelectedBadges] = useState<BadgeId[]>([]);
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -81,10 +85,15 @@ const Profile = () => {
         hasADHD: userData?.hasADHD || false
       });
 
-      // Carregar especialidades para o selector
-      if (user.type === "professional" && userData?.specialty) {
-        const specialtiesArray = userData.specialty.split(",").map((s: string) => s.trim());
-        setSelectedSpecialties(specialtiesArray);
+      // Carregar especialidades e badges para profissionais
+      if (user.type === "professional") {
+        if (userData?.specialty) {
+          const specialtiesArray = userData.specialty.split(",").map((s: string) => s.trim());
+          setSelectedSpecialties(specialtiesArray);
+        }
+        if (userData?.badges) {
+          setSelectedBadges(userData.badges);
+        }
       }
     }
 
@@ -173,7 +182,8 @@ const Profile = () => {
         }),
         ...(user.type === "professional" && {
           specialty: selectedSpecialties.join(", "),
-          crp: formData.crp
+          crp: formData.crp,
+          badges: selectedBadges
         })
       };
       
@@ -438,20 +448,54 @@ const Profile = () => {
                       />
                     </div>
                     {isEditing ? (
-                      <SpecialtySelector 
-                        selectedSpecialties={selectedSpecialties}
-                        onChange={setSelectedSpecialties}
-                      />
-                    ) : (
-                      <div>
-                        <Label htmlFor="specialty">Especialidades</Label>
-                        <Input
-                          id="specialty"
-                          value={selectedSpecialties.join(", ")}
-                          disabled
-                          className="bg-gray-50"
+                      <>
+                        <SpecialtySelector 
+                          selectedSpecialties={selectedSpecialties}
+                          onChange={setSelectedSpecialties}
                         />
-                      </div>
+                        <BadgeSelector 
+                          selectedBadges={selectedBadges}
+                          onChange={setSelectedBadges}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <Label htmlFor="specialty">Áreas de Atuação</Label>
+                          <div className="mt-2 p-3 bg-muted/30 rounded-md border">
+                            <p className="text-sm text-muted-foreground">
+                              {selectedSpecialties.length > 0 
+                                ? selectedSpecialties.join(" • ") 
+                                : "Nenhuma área selecionada"}
+                            </p>
+                          </div>
+                        </div>
+                        <div>
+                          <Label>Habilidades e Familiaridades</Label>
+                          {selectedBadges.length > 0 ? (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {selectedBadges.map((badgeId) => {
+                                const badgeConfig = PROFESSIONAL_BADGES.find(b => b.id === badgeId);
+                                if (!badgeConfig) return null;
+                                const IconComponent = badgeConfig.icon;
+                                
+                                return (
+                                  <Badge key={badgeId} variant="secondary" className="flex items-center gap-1.5 py-1.5 px-3">
+                                    <IconComponent className="w-3.5 h-3.5" />
+                                    {badgeConfig.label}
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="mt-2 p-3 bg-muted/30 rounded-md border">
+                              <p className="text-sm text-muted-foreground">
+                                Nenhuma habilidade/familiaridade selecionada
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </>
                     )}
                   </div>
                 )}

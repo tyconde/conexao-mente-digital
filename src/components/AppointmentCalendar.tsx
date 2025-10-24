@@ -130,6 +130,14 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
 
     const dateStr = selectedDate.toISOString().split("T")[0];
     
+    // Gerar link do Jitsi Meet se for remoto
+    const generateMeetLink = () => {
+      // Gera um ID único para a sala Jitsi Meet usando timestamp e string aleatória
+      const timestamp = Date.now().toString(36);
+      const randomStr = Math.random().toString(36).substring(2, 10);
+      return `https://meet.jit.si/consulta-${timestamp}-${randomStr}`;
+    };
+    
     const appointmentData = {
       patientId: user.id,
       patientName: user.name,
@@ -142,6 +150,7 @@ export const AppointmentCalendar = ({ isOpen, onClose, psychologistId, psycholog
       attendanceType: attendanceType as "presencial" | "remoto",
       status: "pendente" as const,
       notes,
+      meetLink: attendanceType === "remoto" ? generateMeetLink() : undefined,
       createdAt: new Date().toISOString(),
     };
 

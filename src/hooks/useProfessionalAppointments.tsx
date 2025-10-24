@@ -16,6 +16,7 @@ export interface Appointment {
   attendanceType: "presencial" | "remoto";
   status: "pendente" | "confirmada" | "cancelada" | "finalizada";
   notes?: string;
+  meetLink?: string;
   createdAt: string;
 }
 

@@ -13,6 +13,7 @@ import { PendingReviewsNotification } from "@/components/PendingReviewsNotificat
 import { useNavigate } from "react-router-dom";
 import { ReviewModal } from "@/components/ReviewModal";
 import { useReviews } from "@/hooks/useReviews";
+import { parse, isBefore, differenceInMinutes } from "date-fns";
 
 export default function Appointments() {
   const { user } = useAuth();
@@ -21,15 +22,82 @@ export default function Appointments() {
   const { hasReviewedAppointment } = useReviews();
   const [showMessages, setShowMessages] = useState(false);
   const [selectedProfessional, setSelectedProfessional] = useState<{id: string, name: string} | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<number | undefined>(undefined);
   const [userAppointments, setUserAppointments] = useState<any[]>([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [pendingReviewAppointment, setPendingReviewAppointment] = useState<any>(null);
+  const [reviewedInSession, setReviewedInSession] = useState<Set<number>>(new Set());
   const navigate = useNavigate();
+
+  // Verifica se uma consulta já passou da data/hora
+  const isAppointmentPast = (appointment: any): boolean => {
+    try {
+      const appointmentDateTime = parse(
+        `${appointment.date} ${appointment.time}`,
+        "yyyy-MM-dd HH:mm",
+        new Date()
+      );
+      return isBefore(appointmentDateTime, new Date());
+    } catch (error) {
+      console.error("Erro ao verificar data da consulta:", error);
+      return false;
+    }
+  };
+
+  // Verifica se o link de videochamada deve ser exibido (30 minutos antes)
+  const shouldShowMeetLink = (appointment: any): boolean => {
+    if (appointment.status !== "confirmada" || appointment.attendanceType !== "remoto") {
+      return false;
+    }
+
+    try {
+      const appointmentDateTime = parse(
+        `${appointment.date} ${appointment.time}`,
+        "yyyy-MM-dd HH:mm",
+        new Date()
+      );
+      const now = new Date();
+      const minutesUntilAppointment = differenceInMinutes(appointmentDateTime, now);
+      
+      // Exibir link se faltar 30 minutos ou menos e a consulta ainda não passou
+      return minutesUntilAppointment <= 30 && minutesUntilAppointment >= 0;
+    } catch (error) {
+      console.error("Erro ao verificar tempo da consulta:", error);
+      return false;
+    }
+  };
+
+  // Finaliza automaticamente consultas que passaram do prazo
+  const autoFinalizeAppointments = (allAppointments: any[]): any[] => {
+    let updated = false;
+    const updatedAppointments = allAppointments.map(apt => {
+      if (apt.status === "confirmada" && isAppointmentPast(apt)) {
+        updated = true;
+        return { ...apt, status: "finalizada" };
+      }
+      return apt;
+    });
+
+    if (updated) {
+      localStorage.setItem("appointments", JSON.stringify(updatedAppointments));
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'appointments',
+        newValue: JSON.stringify(updatedAppointments)
+      }));
+    }
+
+    return updatedAppointments;
+  };
 
   useEffect(() => {
     const load = () => {
       const saved = localStorage.getItem("appointments");
-      const all = saved ? JSON.parse(saved) : [];
+      let all = saved ? JSON.parse(saved) : [];
+      
+      // Finaliza automaticamente consultas que passaram do prazo
+      all = autoFinalizeAppointments(all);
+      
       const normalized = all.map((a: any) => ({
         ...a,
         id: Number(a.id),
@@ -40,6 +108,19 @@ export default function Appointments() {
         (apt: any) => apt.patientEmail === user?.email || String(apt.patientId) === String(user?.id)
       );
       setUserAppointments(filtered);
+
+      // Verifica se há consultas finalizadas sem avaliação e abre modal automaticamente
+      const finishedWithoutReview = filtered.find(
+        (apt: any) => apt.status === "finalizada" && 
+        !hasReviewedAppointment(apt.id, user?.id || 0) &&
+        !reviewedInSession.has(apt.id)
+      );
+
+      if (finishedWithoutReview && !showReviewModal) {
+        setPendingReviewAppointment(finishedWithoutReview);
+        setSelectedAppointment(finishedWithoutReview);
+        setShowReviewModal(true);
+      }
     };
 
     load();
@@ -48,7 +129,8 @@ export default function Appointments() {
       if (e.key === "appointments") load();
     };
     window.addEventListener("storage", onStorage);
-    const interval = setInterval(load, 2000);
+    // Atualiza a cada 60 segundos para verificar se o link deve aparecer
+    const interval = setInterval(load, 60000);
 
     return () => {
       window.removeEventListener("storage", onStorage);
@@ -107,15 +189,27 @@ export default function Appointments() {
   };
 
   const handleOpenReview = (appointment: any) => {
+    setPendingReviewAppointment(null);
     setSelectedAppointment(appointment);
     setShowReviewModal(true);
   };
 
-  const handleSendMessage = (professionalId: number, professionalName: string) => {
+  const handleCloseReviewModal = () => {
+    // Marca a consulta como revisada nesta sessão para evitar reabertura
+    if (selectedAppointment?.id) {
+      setReviewedInSession(prev => new Set([...prev, selectedAppointment.id]));
+    }
+    setShowReviewModal(false);
+    setSelectedAppointment(null);
+    setPendingReviewAppointment(null);
+  };
+
+  const handleSendMessage = (professionalId: number, professionalName: string, appointmentId?: number) => {
     setSelectedProfessional({
       id: professionalId.toString(),
       name: professionalName
     });
+    setSelectedAppointmentId(appointmentId);
     setShowMessages(true);
   };
 
@@ -231,13 +325,32 @@ export default function Appointments() {
                 }
               </span>
             </div>
+                        {appointment.attendanceType === "remoto" && appointment.status === "confirmada" && (
+                          <div className="flex items-center gap-2 mt-2 p-2 bg-blue-50 rounded">
+                            <Monitor className="w-4 h-4 text-blue-600" />
+                            {shouldShowMeetLink(appointment) && appointment.meetLink ? (
+                              <a 
+                                href={appointment.meetLink} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-700 underline font-medium"
+                              >
+                                Entrar na sala de videochamada (Jitsi Meet)
+                              </a>
+                            ) : (
+                              <span className="text-blue-600 font-medium">
+                                O link da videochamada será disponibilizado cerca de 30 minutos antes do início da consulta
+                              </span>
+                            )}
+                          </div>
+                        )}
           </div>
 
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleSendMessage(appointment.professionalId, appointment.professionalName || "Profissional")}
+              onClick={() => handleSendMessage(appointment.professionalId, appointment.professionalName || "Profissional", appointment.id)}
             >
               <MessageCircle className="w-4 h-4 mr-1" />
               Mensagem
@@ -363,20 +476,23 @@ export default function Appointments() {
 
       <MessagesModal
         open={showMessages}
-        onOpenChange={setShowMessages}
+        onOpenChange={(open) => {
+          setShowMessages(open);
+          if (!open) {
+            setSelectedAppointmentId(undefined);
+          }
+        }}
         recipientId={selectedProfessional?.id}
         recipientName={selectedProfessional?.name}
         userId={user?.id?.toString() || ""}
         userType="patient"
+        appointmentId={selectedAppointmentId}
       />
 
       {selectedAppointment && (
         <ReviewModal
           isOpen={showReviewModal}
-          onClose={() => {
-            setShowReviewModal(false);
-            setSelectedAppointment(null);
-          }}
+          onClose={handleCloseReviewModal}
           appointment={selectedAppointment}
           patientId={user?.id || 0}
           patientName={user?.name || ""}

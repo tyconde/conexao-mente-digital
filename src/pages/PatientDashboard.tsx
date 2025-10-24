@@ -14,11 +14,9 @@ import {
   User,
   Home,
   MapPin,
-  Monitor,
-  Eye,
-  Ear,
-  Hand
+  Monitor
 } from "lucide-react";
+import { PROFESSIONAL_BADGES, BadgeId } from "@/constants/professionalData";
 import { Navigation } from "@/components/Navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppointments } from "@/hooks/useAppointments";
@@ -33,8 +31,9 @@ import { PendingReviewsNotification } from "@/components/PendingReviewsNotificat
 
 const PatientDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSpecialty, setSelectedSpecialty] = useState("all");
+  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [priceFilter, setPriceFilter] = useState<string[]>([]);
+  const [selectedBadges, setSelectedBadges] = useState<BadgeId[]>([]);
   const [showCalendar, setShowCalendar] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [selectedPsychologist, setSelectedPsychologist] = useState<any>(null);
@@ -44,30 +43,48 @@ const PatientDashboard = () => {
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
   const { psychologists } = useRegisteredPsychologists();
 
-  // Extrair especialidades únicas dos psicólogos registrados
-  const availableSpecialties = psychologists.length > 0 
-    ? ["Todas as especialidades", ...Array.from(new Set(psychologists.map(p => p.specialty)))]
-    : ["Todas as especialidades", "Psicologia Clínica"];
+  // Extrair todas as especialidades únicas de todos os profissionais
+  const availableSpecialties: string[] = Array.from(
+    new Set(
+      psychologists.flatMap(p => p.specialties || [])
+    )
+  ).sort();
 
   const filteredPsychologists = psychologists.filter(psychologist => {
-    const matchesSearch = psychologist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         psychologist.specialty.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesSpecialty = selectedSpecialty === "all" || 
-                            psychologist.specialty === selectedSpecialty;
-    
-    const matchesPrice = priceFilter.length === 0 || 
-                        priceFilter.some(range => {
-                          const price = psychologist.price || 150;
-                          switch(range) {
-                            case "100-150": return price >= 100 && price <= 150;
-                            case "150-200": return price >= 150 && price <= 200;
-                            case "200+": return price >= 200;
-                            default: return true;
-                          }
-                        });
+    // Filtro por nome
+    if (searchTerm && !psychologist.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
+    }
 
-    return matchesSearch && matchesSpecialty && matchesPrice;
+    // Filtro por especialidades (deve ter PELO MENOS UMA das especialidades selecionadas)
+    if (selectedSpecialties.length > 0) {
+      const hasMatchingSpecialty = selectedSpecialties.some(selectedSpec => 
+        psychologist.specialties?.includes(selectedSpec)
+      );
+      if (!hasMatchingSpecialty) return false;
+    }
+    
+    // Filtro por preço
+    if (priceFilter.length > 0) {
+      const price = psychologist.price || 150;
+      const matchesPrice = priceFilter.some(range => {
+        if (range === "100-150") return price >= 100 && price <= 150;
+        if (range === "150-200") return price >= 150 && price <= 200;
+        if (range === "200+") return price >= 200;
+        return false;
+      });
+      if (!matchesPrice) return false;
+    }
+
+    // Filtro por badges (deve ter TODAS as badges selecionadas)
+    if (selectedBadges.length > 0) {
+      const hasBadges = selectedBadges.every(badgeId => 
+        psychologist.badges?.includes(badgeId)
+      );
+      if (!hasBadges) return false;
+    }
+
+    return true;
   });
 
   const handlePriceFilterChange = (range: string) => {
@@ -75,6 +92,12 @@ const PatientDashboard = () => {
       prev.includes(range) 
         ? prev.filter(p => p !== range)
         : [...prev, range]
+    );
+  };
+
+  const handleBadgeFilterChange = (badgeId: BadgeId) => {
+    setSelectedBadges(prev =>
+      prev.includes(badgeId) ? prev.filter(b => b !== badgeId) : [...prev, badgeId]
     );
   };
 
@@ -175,11 +198,13 @@ const PatientDashboard = () => {
           <DashboardFilters
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
-            selectedSpecialty={selectedSpecialty}
-            setSelectedSpecialty={setSelectedSpecialty}
-            priceFilter={priceFilter}
-            handlePriceFilterChange={handlePriceFilterChange}
-            availableSpecialties={availableSpecialties}
+            selectedSpecialties={selectedSpecialties}
+            setSelectedSpecialties={setSelectedSpecialties}
+              priceFilter={priceFilter}
+              handlePriceFilterChange={handlePriceFilterChange}
+              availableSpecialties={availableSpecialties}
+              selectedBadges={selectedBadges}
+              handleBadgeFilterChange={handleBadgeFilterChange}
           />
 
           <div className="lg:col-span-3">
@@ -269,24 +294,18 @@ const PatientDashboard = () => {
                                 Presencial
                               </Badge>
                             )}
-                            {psychologist.knowsLibras && (
-                              <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-200">
-                                <Hand className="w-3 h-3" />
-                                Fluente em Libras
-                              </Badge>
-                            )}
-                            {psychologist.hasVisualImpairment && (
-                              <Badge variant="outline" className="flex items-center gap-1 bg-purple-50 text-purple-700 border-purple-200">
-                                <Eye className="w-3 h-3" />
-                                Deficiência Visual
-                              </Badge>
-                            )}
-                            {psychologist.hasHearingImpairment && (
-                              <Badge variant="outline" className="flex items-center gap-1 bg-purple-50 text-purple-700 border-purple-200">
-                                <Ear className="w-3 h-3" />
-                                Deficiência Auditiva
-                              </Badge>
-                            )}
+                            {psychologist.badges?.map((badgeId) => {
+                              const badgeConfig = PROFESSIONAL_BADGES.find(b => b.id === badgeId);
+                              if (!badgeConfig) return null;
+                              const IconComponent = badgeConfig.icon;
+                              
+                              return (
+                                <Badge key={badgeId} variant="secondary" className="flex items-center gap-1">
+                                  <IconComponent className="w-3 h-3" />
+                                  {badgeConfig.label}
+                                </Badge>
+                              );
+                            })}
                           </div>
 
                           {psychologist.attendanceTypes?.presencial && psychologist.clinicAddress && (

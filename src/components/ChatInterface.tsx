@@ -2,9 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Circle } from "lucide-react";
+import { Send, Circle, Video } from "lucide-react";
 import { Conversation, Message } from "@/hooks/useMessages";
 import { cn } from "@/lib/utils";
+import { parse, differenceInMinutes } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChatInterfaceProps {
   conversation: Conversation | null;
@@ -12,6 +14,7 @@ interface ChatInterfaceProps {
   userId?: string;
   userType: "patient" | "professional";
   onSendMessage: (content: string) => void;
+  appointmentId?: number;
 }
 
 // Helper para buscar foto de perfil
@@ -30,10 +33,23 @@ export const ChatInterface = ({
   recipientName,
   userId,
   userType,
-  onSendMessage 
+  onSendMessage,
+  appointmentId
 }: ChatInterfaceProps) => {
   const [newMessage, setNewMessage] = useState("");
+  const [linkSent, setLinkSent] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  
+  // Buscar appointment se appointmentId foi passado
+  const appointment = appointmentId ? (() => {
+    try {
+      const appointments = JSON.parse(localStorage.getItem("appointments") || "[]");
+      return appointments.find((apt: any) => apt.id === appointmentId);
+    } catch {
+      return null;
+    }
+  })() : null;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -61,6 +77,42 @@ export const ChatInterface = ({
     return date.toLocaleTimeString('pt-BR', { 
       hour: '2-digit', 
       minute: '2-digit' 
+    });
+  };
+
+  // Verificar se pode enviar link de videochamada
+  const canSendMeetLink = () => {
+    if (!appointment || userType !== "professional") return false;
+    if (appointment.status !== "confirmada") return false;
+    if (appointment.attendanceType !== "remoto") return false;
+    if (!appointment.meetLink) return false;
+    
+    try {
+      const appointmentDateTime = parse(
+        `${appointment.date} ${appointment.time}`,
+        "yyyy-MM-dd HH:mm",
+        new Date()
+      );
+      const now = new Date();
+      const minutesUntilAppointment = differenceInMinutes(appointmentDateTime, now);
+      
+      // Permitir envio até 60 minutos antes E até 30 minutos depois do início
+      return minutesUntilAppointment <= 60 && minutesUntilAppointment >= -30;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleSendMeetLink = () => {
+    if (!appointment?.meetLink) return;
+    
+    const linkMessage = `📹 Link da videochamada: ${appointment.meetLink}\n\nClique no link acima para entrar na consulta.`;
+    onSendMessage(linkMessage);
+    setLinkSent(true);
+    
+    toast({
+      title: "Link enviado!",
+      description: "O link da videochamada foi enviado ao paciente.",
     });
   };
 
@@ -185,7 +237,23 @@ export const ChatInterface = ({
       </div>
 
       {/* Campo de digitação */}
-      <div className="p-4 border-t bg-background">
+      <div className="p-4 border-t bg-background space-y-3">
+        {/* Botão de enviar link de videochamada (apenas para profissionais) */}
+        {canSendMeetLink() && (
+          <div className="flex justify-center">
+            <Button
+              onClick={handleSendMeetLink}
+              disabled={linkSent}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <Video className="w-4 h-4" />
+              {linkSent ? "Link da videochamada enviado" : "Enviar link de videochamada"}
+            </Button>
+          </div>
+        )}
+        
         <div className="flex gap-2">
           <Textarea
             value={newMessage}
@@ -204,7 +272,7 @@ export const ChatInterface = ({
             <Send className="w-5 h-5" />
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground mt-2">
+        <p className="text-xs text-muted-foreground">
           Pressione Enter para enviar, Shift+Enter para nova linha
         </p>
       </div>

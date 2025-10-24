@@ -1,13 +1,14 @@
-
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Star, Calendar, MessageCircle, MapPin, Monitor, Eye, Ear, Hand } from "lucide-react";
+import { Star, Calendar, MessageCircle, MapPin, Monitor } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useReviews } from "@/hooks/useReviews";
 import { useState } from "react";
 import { AuthModal } from "./AuthModal";
 import { MessagesModal } from "./MessagesModal";
+import { PROFESSIONAL_BADGES, BadgeId } from "@/constants/professionalData";
+import { cn } from "@/lib/utils";
 
 interface ProfessionalCardProps {
   id: number;
@@ -45,15 +46,11 @@ export const ProfessionalCard = ({
     '{"attendanceTypes": {"remoto": true, "presencial": false}, "address": ""}'
   );
 
-  // Buscar dados completos do profissional para pegar a imagem correta e acessibilidade
+  // Buscar dados completos do profissional para pegar a imagem correta e badges
   const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
   const professionalData = registeredUsers.find((u: any) => u.id === id);
   const profileImage = professionalData?.profileImage || image;
-  const accessibility = {
-    hasVisualImpairment: professionalData?.hasVisualImpairment || false,
-    hasHearingImpairment: professionalData?.hasHearingImpairment || false,
-    knowsLibras: professionalData?.knowsLibras || false
-  };
+  const professionalBadges: BadgeId[] = professionalData?.badges || [];
 
   const handleSchedule = () => {
     if (!user) {
@@ -166,29 +163,50 @@ export const ProfessionalCard = ({
             )}
           </div>
 
-          {/* Acessibilidade */}
-          {(accessibility.hasVisualImpairment || accessibility.hasHearingImpairment || accessibility.knowsLibras) && (
+          {/* Habilidades e Familiaridades */}
+          {professionalBadges.length > 0 && (
             <div className="space-y-1">
-              <p className="text-xs font-medium text-foreground">Acessibilidade:</p>
+              <p className="text-xs font-medium text-foreground">Habilidades:</p>
               <div className="flex flex-wrap gap-2">
-                {accessibility.hasVisualImpairment && (
-                  <Badge variant="secondary" className="flex items-center gap-1 bg-blue-100 text-blue-800">
-                    <Eye className="w-3 h-3" />
-                    Deficiência Visual
-                  </Badge>
-                )}
-                {accessibility.hasHearingImpairment && (
-                  <Badge variant="secondary" className="flex items-center gap-1 bg-purple-100 text-purple-800">
-                    <Ear className="w-3 h-3" />
-                    Deficiência Auditiva
-                  </Badge>
-                )}
-                {accessibility.knowsLibras && (
-                  <Badge variant="secondary" className="flex items-center gap-1 bg-green-100 text-green-800">
-                    <Hand className="w-3 h-3" />
-                    Fluente em Libras
-                  </Badge>
-                )}
+                {professionalBadges.map((badgeId) => {
+                  const badgeConfig = PROFESSIONAL_BADGES.find(b => b.id === badgeId);
+                  if (!badgeConfig) return null;
+                  const IconComponent = badgeConfig.icon;
+                  
+                  // Color mapping for badges
+                  const colorClasses = {
+                    blue: "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+                    purple: "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
+                    yellow: "bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300",
+                    indigo: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
+                    green: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+                    slate: "bg-slate-100 text-slate-700 dark:bg-slate-950 dark:text-slate-300",
+                    pink: "bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300",
+                    cyan: "bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300",
+                    violet: "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300",
+                    amber: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+                    rose: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
+                    red: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+                    lime: "bg-lime-100 text-lime-700 dark:bg-lime-950 dark:text-lime-300",
+                    rainbow: "bg-gradient-to-r from-red-400 via-yellow-400 to-purple-400 text-white dark:from-red-600 dark:via-yellow-600 dark:to-purple-600",
+                    orange: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
+                    gray: "bg-gray-100 text-gray-700 dark:bg-gray-950 dark:text-gray-300"
+                  };
+                  
+                  return (
+                    <Badge 
+                      key={badgeId} 
+                      variant="secondary" 
+                      className={cn(
+                        "flex items-center gap-1 border-0",
+                        colorClasses[badgeConfig.color as keyof typeof colorClasses] || "bg-secondary text-secondary-foreground"
+                      )}
+                    >
+                      <IconComponent className="w-3 h-3" />
+                      {badgeConfig.label}
+                    </Badge>
+                  );
+                })}
               </div>
             </div>
           )}

@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { AccessibilityProvider } from "@/contexts/AccessibilityContext";
 import { FloatingMessagesButton } from "@/components/FloatingMessagesButton";
 import Index from "./pages/Index";
+import Search from "./pages/Search";
 import PatientDashboard from "./pages/PatientDashboard";
 import ProfessionalDashboard from "./pages/ProfessionalDashboard";
 import Profile from "./pages/Profile";
@@ -29,6 +30,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/search" element={<Search />} />
               <Route path="/patient-dashboard" element={<PatientDashboard />} />
               <Route path="/professional-dashboard" element={<ProfessionalDashboard />} />
               <Route path="/profile" element={<Profile />} />

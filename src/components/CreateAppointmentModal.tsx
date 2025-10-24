@@ -12,6 +12,7 @@ export interface AppointmentType {
   attendanceType: "presencial" | "remoto";
   patientEmail: string;
   notes?: string;
+  meetLink?: string;
   status: "pendente" | "confirmada" | "cancelada";
 }
 
@@ -29,6 +30,13 @@ export function CreateAppointmentModal({ isOpen, onClose, onCreate }: CreateAppo
   const [attendanceType, setAttendanceType] = useState<"presencial" | "remoto">("presencial");
   const [patientEmail, setPatientEmail] = useState("");
   const [notes, setNotes] = useState("");
+
+  const generateMeetLink = () => {
+    // Gera um ID único para a sala Jitsi Meet usando timestamp e string aleatória
+    const timestamp = Date.now().toString(36);
+    const randomStr = Math.random().toString(36).substring(2, 10);
+    return `https://meet.jit.si/consulta-${timestamp}-${randomStr}`;
+  };
 
   const handleCreate = () => {
     // Validar se a data não é no passado
@@ -50,6 +58,7 @@ export function CreateAppointmentModal({ isOpen, onClose, onCreate }: CreateAppo
       attendanceType,
       patientEmail,
       notes,
+      meetLink: attendanceType === "remoto" ? generateMeetLink() : undefined,
       status: "pendente",
     };
     onCreate(newAppointment);

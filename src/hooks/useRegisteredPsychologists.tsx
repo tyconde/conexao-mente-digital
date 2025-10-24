@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useReviews } from "./useReviews";
+import { BadgeId } from "@/constants/professionalData";
 
 interface RegisteredPsychologist {
   id: number;
@@ -22,7 +23,8 @@ interface RegisteredPsychologist {
   reviewCount?: number;
   hasVisualImpairment?: boolean;
   hasHearingImpairment?: boolean;
-  knowsLibras?: boolean;
+  badges?: BadgeId[];
+  specialties?: string[];
 }
 
 export const useRegisteredPsychologists = () => {
@@ -49,11 +51,17 @@ export const useRegisteredPsychologists = () => {
       const professionalReviews = getProfessionalReviews(user.id);
       const reviewCount = professionalReviews.length;
 
+      // Separar especialidades em array
+      const specialtiesArray = user.specialty 
+        ? user.specialty.split(',').map((s: string) => s.trim()).filter(Boolean)
+        : ["Psicologia Clínica"];
+
       return {
         id: user.id,
         name: user.name,
         email: user.email,
         specialty: user.specialty || "Psicologia Clínica",
+        specialties: specialtiesArray,
         crp: user.crp || "",
         phone: user.phone,
         address: user.address,
@@ -66,7 +74,7 @@ export const useRegisteredPsychologists = () => {
         reviewCount: reviewCount,
         hasVisualImpairment: user.hasVisualImpairment || false,
         hasHearingImpairment: user.hasHearingImpairment || false,
-        knowsLibras: user.knowsLibras || false
+        badges: user.badges || []
       };
     });
 
